@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/products', async (req, res) => {
-  try {
+  try { 
     const { name, price, description, stock } = req.body;
 
     const [result] = await pool.query(
