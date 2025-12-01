@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import db from './config/db.js';
+import productRoutes from './routes/productRoutes.js';
 import User from './models/UserModel.js';
 import Product from './models/ProductModel.js';
 
@@ -10,6 +11,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
+
+app.use('/api/products', productRoutes);
 
 const conectarDB = async () => {
     try {
