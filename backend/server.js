@@ -3,9 +3,10 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import db from './config/db.js';
 import productRoutes from './routes/productRoutes.js';
+import authRoutes from './routes/authRoutes.js'; 
 import User from './models/UserModel.js';
 import Product from './models/ProductModel.js';
-
+import orderRoutes from './routes/orderRoutes.js';
 dotenv.config();
 
 const app = express();
@@ -14,7 +15,12 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Rutas
 app.use('/api/products', productRoutes);
+app.use('/api/auth', authRoutes); 
+app.use('/api/products', productRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/orders', orderRoutes);
 
 const conectarDB = async () => {
     try {
