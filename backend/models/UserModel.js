@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import db from '../config/db.js';
 import bcrypt from 'bcryptjs';
 import Order from './OrderModel.js'; // <--- CORRECCIÓN CLAVE: Importamos Order
-
+import PaymentMethod from './PaymentMethodModel.js';
 const User = db.define('User', {
     name: {
         type: DataTypes.STRING,
@@ -36,5 +36,10 @@ const User = db.define('User', {
 // Un Usuario (Cliente) puede tener muchos Pedidos.
 User.hasMany(Order, { foreignKey: 'userId' }); 
 Order.belongsTo(User, { foreignKey: 'userId' });
+
+
+// NUEVA RELACIÓN: Métodos de Pago
+User.hasMany(PaymentMethod, { foreignKey: 'userId' });
+PaymentMethod.belongsTo(User, { foreignKey: 'userId' });
 
 export default User;

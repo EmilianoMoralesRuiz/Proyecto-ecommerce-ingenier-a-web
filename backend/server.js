@@ -7,6 +7,8 @@ import authRoutes from './routes/authRoutes.js';
 import User from './models/UserModel.js';
 import Product from './models/ProductModel.js';
 import orderRoutes from './routes/orderRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js'; // <--- IMPORTAR RUTAS
+import PaymentMethod from './models/PaymentMethodModel.js'; // <--- IMPORTAR MODELO
 dotenv.config();
 
 const app = express();
@@ -21,6 +23,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
 
 const conectarDB = async () => {
     try {
