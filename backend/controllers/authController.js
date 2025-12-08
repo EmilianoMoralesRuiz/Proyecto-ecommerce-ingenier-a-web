@@ -2,17 +2,15 @@ import User from '../models/UserModel.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// 1. REGISTRO
 export const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
         
-        // Crear usuario (el modelo encriptará el password solo)
         const user = await User.create({
             name,
             email,
             password,
-            role // (admin, client, operator)
+            role 
         });
 
         res.status(201).json({ message: "Usuario creado exitosamente", userId: user.id });
@@ -21,24 +19,20 @@ export const register = async (req, res) => {
     }
 };
 
-// 2. LOGIN
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Buscar si existe el email
         const user = await User.findOne({ where: { email } });
         if (!user) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
 
-        // Comparar contraseñas (la que escribió vs la encriptada)
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Contraseña incorrecta" });
         }
 
-        // Crear el Token (Pase de acceso)
         const token = jwt.sign({ id: user.id, role: user.role }, 'secreto_super_seguro', {
             expiresIn: '1h'
         });
@@ -51,5 +45,27 @@ export const login = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+export const verifyToken = (req, res, next) => {
+    const tokenHeader = req.header('Authorization');
+
+    if (!tokenHeader) {
+        return res.status(401).json({ message: "Acceso denegado. No hay token." });
+    }
+
+    try {
+        const token = tokenHeader.startsWith("Bearer ") 
+            ? tokenHeader.slice(7, tokenHeader.length).trimLeft() 
+            : tokenHeader;
+
+        const verified = jwt.verify(token, 'secreto_super_seguro');
+
+        req.user = verified;
+        
+        next(); 
+    } catch (error) {
+        res.status(400).json({ message: "Token no válido o expirado." });
     }
 };

@@ -7,8 +7,8 @@ import authRoutes from './routes/authRoutes.js';
 import User from './models/UserModel.js';
 import Product from './models/ProductModel.js';
 import orderRoutes from './routes/orderRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js'; // <--- IMPORTAR RUTAS
-import PaymentMethod from './models/PaymentMethodModel.js'; // <--- IMPORTAR MODELO
+import paymentRoutes from './routes/paymentRoutes.js'; 
+import PaymentMethod from './models/PaymentMethodModel.js'; 
 dotenv.config();
 
 const app = express();

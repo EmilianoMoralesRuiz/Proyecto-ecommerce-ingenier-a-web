@@ -1,18 +1,21 @@
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders'; 
-import Wallet from './pages/Wallet'; // <--- Importamos la Billetera
+import Wallet from './pages/Wallet'; 
+
+import OperatorPanel from './pages/OperatorPanel';
 import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Al cargar la página, revisamos si hay una sesión guardada
+    
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -28,7 +31,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* --- BARRA DE NAVEGACIÓN --- */}
+      {/* --- BARRA DE NAVEGACIÓN (NAVBAR) --- */}
       <nav style={{ 
         padding: '15px 30px', 
         borderBottom: '1px solid #e0e0e0', 
@@ -39,7 +42,7 @@ function App() {
         alignItems: 'center',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
       }}>
-        {/* Lado Izquierdo: Logo y Carrito */}
+        {/* Lado Izquierdo */}
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <Link to="/" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold', fontSize: '1.2rem' }}>
             📱 MobiStore
@@ -49,11 +52,17 @@ function App() {
           </Link>
         </div>
         
-        {/* Lado Derecho: Menú de Usuario */}
+        {/* Lado Derecho (Menú Usuario) */}
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {user ? (
             <>
-              {/* Enlaces solo para usuarios logueados */}
+              {/* ESTE BOTÓN SOLO APARECE SI ERES ADMIN U OPERADOR */}
+              {(user.role === 'operator' || user.role === 'admin') && (
+                 <Link to="/operator" style={{ textDecoration: 'none', color: '#d63384', fontWeight: 'bold', border: '1px solid #d63384', padding: '5px 10px', borderRadius: '5px' }}>
+                   🛠️ Panel Operador
+                 </Link>
+              )}
+
               <Link to="/orders" style={{ textDecoration: 'none', color: '#007bff', fontWeight: 'bold' }}>
                 📦 Mis Pedidos
               </Link>
@@ -63,7 +72,7 @@ function App() {
               </Link>
               
               <span style={{ color: '#555', fontSize: '0.9rem', borderLeft: '1px solid #ccc', paddingLeft: '15px' }}>
-                Hola, {user.name} ({user.role})
+                Hola, {user.name}
               </span>
               
               <button 
@@ -75,7 +84,6 @@ function App() {
             </>
           ) : (
             <>
-              {/* Enlaces para visitantes */}
               <Link to="/login" style={{ textDecoration: 'none', color: '#007bff', fontWeight: '500' }}>
                 Iniciar Sesión
               </Link>
@@ -87,21 +95,27 @@ function App() {
         </div>
       </nav>
 
-      {/* --- DEFINICIÓN DE RUTAS --- */}
+      {/* --- RUTAS DE LA APP --- */}
       <Routes>
-        {/* Página Principal (Catálogo) */}
         <Route path="/" element={<Home />} />
-        
-        {/* Rutas Públicas (Login/Registro) - Si ya estás logueado, te mandan al Home */}
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-        
-        {/* Ruta del Carrito (Pública, pero pide login al pagar) */}
         <Route path="/cart" element={<Cart />} />
         
-        {/* Rutas Protegidas (Solo usuarios logueados) */}
+        {/* Rutas de Cliente */}
         <Route path="/orders" element={user ? <Orders /> : <Navigate to="/login" />} />
         <Route path="/wallet" element={user ? <Wallet /> : <Navigate to="/login" />} />
+
+        {/* --- RUTA NUEVA: PANEL DE OPERADOR --- */}
+        <Route 
+          path="/operator" 
+          element={
+            // Protección: Solo entra si hay usuario Y su rol es admin u operador
+            user && (user.role === 'operator' || user.role === 'admin') 
+            ? <OperatorPanel /> 
+            : <Navigate to="/" />
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );
