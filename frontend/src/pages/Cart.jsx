@@ -1,114 +1,231 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function Cart() {
-    const [cart, setCart] = useState([]);
-    const [address, setAddress] = useState('');
-    const navigate = useNavigate();
+const Cart = () => {
+  const navigate = useNavigate();
+  const [cart, setCart] = useState([]);
+  const [total, setTotal] = useState(0);
+  
+  const [address, setAddress] = useState({
+    street: '', exterior_number: '', neighborhood: '', city: '', zip_code: ''
+  });
 
-    // Al cargar, leemos el carrito del LocalStorage
-    useEffect(() => {
-        const storedCart = JSON.parse(localStorage.getItem('cart')) || [];
-        setCart(storedCart);
-    }, []);
+  const [cards, setCards] = useState([]); 
+  const [selectedCard, setSelectedCard] = useState('new'); 
+  const [newCard, setNewCard] = useState({
+    card_holder: '', card_number: '', expiration: '', cvv: ''
+  });
 
-    // Calcular el total
-    const total = cart.reduce((sum, item) => sum + parseFloat(item.price), 0);
+  useEffect(() => {
+    loadCart();
+    loadCards();
+  }, []);
 
-    const handleCheckout = async () => {
-        // 1. Validar que haya usuario logueado
-        const userString = localStorage.getItem('user');
-        if (!userString) {
-            alert('Debes iniciar sesión para comprar.');
-            navigate('/login');
-            return;
+  const loadCart = () => {
+    const storedCart = JSON.parse(localStorage.getItem('cart')) || [];
+    setCart(storedCart);
+    const sum = storedCart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    setTotal(sum);
+  };
+
+  const loadCards = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('http://localhost:5000/api/payments', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCards(data);
+        if (data.length > 0) {
+          setSelectedCard(data[0].id);
+        } else {
+          setSelectedCard('new');
         }
-        const user = JSON.parse(userString);
+      }
+    } catch (error) {
+      console.error("Error cargando tarjetas");
+    }
+  };
 
-        // 2. Validar dirección
-        if (!address) {
-            alert('Por favor ingresa una dirección de envío.');
-            return;
+  const handleRemove = (id) => {
+    const updatedCart = cart.filter(item => item.id !== id);
+    setCart(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    const sum = updatedCart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    setTotal(sum);
+  };
+
+  const handleAddressChange = (e) => setAddress({ ...address, [e.target.name]: e.target.value });
+  const handleCardChange = (e) => setNewCard({ ...newCard, [e.target.name]: e.target.value });
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem('token');
+
+    if (!user || !token) {
+      return navigate('/login');
+    }
+
+    if (cart.length === 0) return alert('El carrito está vacío.');
+
+    if (!address.street || !address.exterior_number || !address.zip_code || !address.city) {
+        return alert("Por favor completa todos los campos de la dirección");
+    }
+
+    try {
+      // 1. GESTIÓN DE TARJETA
+      if (selectedCard === 'new') {
+        if (!newCard.card_number || !newCard.cvv || !newCard.expiration || !newCard.card_holder) {
+            return alert('Debes llenar los datos de la tarjeta o seleccionar una existente');
         }
 
-        // 3. Enviar al Backend
-        try {
-            const response = await fetch('http://localhost:5000/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    total_amount: total,
-                    shipping_address: address,
-                    userId: user.id
-                })
-            });
+        const saveCardRes = await fetch('http://localhost:5000/api/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            card_holder: newCard.card_holder,
+            card_number: newCard.card_number,
+            expiration_date: newCard.expiration, 
+            cvv: newCard.cvv, 
+            userId: user.id
+          })
+        });
 
-            if (response.ok) {
-                alert('¡Compra realizada con éxito! 📦');
-                localStorage.removeItem('cart'); // Limpiar carrito
-                setCart([]);
-                navigate('/');
-            } else {
-                alert('Error al procesar la compra.');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Error de conexión.');
+        if (!saveCardRes.ok) {
+            const errData = await saveCardRes.json();
+            return alert('Error al guardar la tarjeta: ' + errData.message);
         }
-    };
+        
+        console.log("Tarjeta nueva guardada y validada.");
+      }
 
-    const removeItem = (indexToRemove) => {
-        const newCart = cart.filter((_, index) => index !== indexToRemove);
-        setCart(newCart);
-        localStorage.setItem('cart', JSON.stringify(newCart));
-    };
+      // 2. CREACIÓN DE ORDEN
+      const fullAddress = `${address.street} #${address.exterior_number}, Col. ${address.neighborhood}, ${address.city}, CP ${address.zip_code}`;
 
+      const orderData = {
+        total_amount: total,
+        shipping_address: fullAddress,
+        userId: user.id,
+        items: cart,
+        status: 'paid' 
+      };
+
+      const orderRes = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (orderRes.ok) {
+        localStorage.removeItem('cart');
+        setCart([]);
+        navigate('/orders'); 
+      } else {
+        const errorData = await orderRes.json();
+        alert('Error al crear la orden: ' + errorData.message);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión.');
+    }
+  };
+
+  const styles = {
+    container: { padding: '40px', maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '30px', flexWrap: 'wrap' },
+    itemsSection: { flex: '1.5', minWidth: '300px' },
+    summarySection: { flex: '1', minWidth: '350px', backgroundColor: '#f8f9fa', padding: '25px', borderRadius: '10px', height: 'fit-content' },
+    itemCard: { display: 'flex', alignItems: 'center', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #eee' },
+    img: { width: '70px', height: '70px', objectFit: 'contain', marginRight: '15px', border: '1px solid #ddd', borderRadius: '5px' },
+    input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc' },
+    label: { display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem', color: '#555', marginTop: '10px' },
+    sectionTitle: { marginBottom: '15px', borderBottom: '2px solid #ddd', paddingBottom: '5px', color: '#333' },
+    checkoutBtn: { width: '100%', padding: '15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', marginTop: '20px' }
+  };
+
+  if (cart.length === 0) {
     return (
-        <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
-            <h2>🛒 Tu Carrito de Compras</h2>
-
-            {cart.length === 0 ? (
-                <p>El carrito está vacío.</p>
-            ) : (
-                <>
-                    <div style={{ marginBottom: '20px' }}>
-                        {cart.map((item, index) => (
-                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ccc', padding: '10px' }}>
-                                <div>
-                                    <h4>{item.name}</h4>
-                                    <p>${item.price}</p>
-                                </div>
-                                <button onClick={() => removeItem(index)} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px' }}>
-                                    Eliminar
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ borderTop: '2px solid #333', paddingTop: '20px' }}>
-                        <h3>Total a Pagar: ${total.toFixed(2)}</h3>
-                        
-                        <div style={{ margin: '20px 0' }}>
-                            <label style={{ display: 'block', marginBottom: '5px' }}>Dirección de Envío:</label>
-                            <textarea 
-                                value={address} 
-                                onChange={(e) => setAddress(e.target.value)} 
-                                placeholder="Calle, Número, Colonia, Ciudad..." 
-                                style={{ width: '100%', padding: '10px', height: '80px' }}
-                            />
-                        </div>
-
-                        <button 
-                            onClick={handleCheckout} 
-                            style={{ width: '100%', padding: '15px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.2rem' }}
-                        >
-                            Confirmar Compra
-                        </button>
-                    </div>
-                </>
-            )}
-        </div>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <h2>Tu carrito está vacío 🛒</h2>
+        <button onClick={() => navigate('/')} style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}>Volver al catálogo</button>
+      </div>
     );
-}
+  }
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.itemsSection}>
+        <h2 style={{ marginBottom: '20px' }}>Tu Carrito ({cart.length})</h2>
+        {cart.map((item, index) => (
+          <div key={index} style={styles.itemCard}>
+            <img src={item.image || 'https://via.placeholder.com/80'} alt={item.name} style={styles.img} />
+            <div style={{ flex: 1 }}>
+              <h4 style={{ margin: 0 }}>{item.name}</h4>
+              <p style={{ margin: '5px 0', color: '#666' }}>Cant: {item.quantity}</p>
+              <p style={{ margin: 0, fontWeight: 'bold' }}>${item.price * item.quantity}</p>
+            </div>
+            <button onClick={() => handleRemove(item.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>🗑️</button>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.summarySection}>
+        <h2 style={{marginTop: 0}}>Resumen: ${total}</h2>
+        <form onSubmit={handleCheckout}>
+          
+          <h4 style={styles.sectionTitle}>📍 Dirección de Envío</h4>
+          <input name="street" placeholder="Calle" required onChange={handleAddressChange} style={styles.input} />
+          
+          {/* AQUÍ ESTABA EL ERROR ANTES, AHORA ESTÁ CORREGIDO */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <input name="exterior_number" placeholder="Número Ext." required onChange={handleAddressChange} style={styles.input} />
+            <input name="zip_code" placeholder="C.P." required onChange={handleAddressChange} style={styles.input} />
+          </div>
+
+          <input name="neighborhood" placeholder="Colonia" required onChange={handleAddressChange} style={styles.input} />
+          <input name="city" placeholder="Ciudad / Municipio" required onChange={handleAddressChange} style={styles.input} />
+
+          <h4 style={styles.sectionTitle}>💳 Método de Pago</h4>
+          
+          <select 
+            value={selectedCard} 
+            onChange={(e) => setSelectedCard(e.target.value)}
+            style={styles.input}
+          >
+            {cards.map(card => (
+              <option key={card.id} value={card.id}>
+                Terminada en **** {card.card_number.slice(-4)} ({card.card_holder})
+              </option>
+            ))}
+            <option value="new">➕ Agregar nueva tarjeta...</option>
+          </select>
+
+          {selectedCard === 'new' && (
+            <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '5px', border: '1px solid #ddd' }}>
+              <input name="card_holder" placeholder="Titular de la tarjeta" value={newCard.card_holder} onChange={handleCardChange} style={styles.input} />
+              <input name="card_number" placeholder="Número de tarjeta (16 dígitos)" maxLength="16" value={newCard.card_number} onChange={handleCardChange} style={styles.input} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <input name="expiration" placeholder="MM/AA" value={newCard.expiration} onChange={handleCardChange} style={styles.input} />
+                <input name="cvv" placeholder="CVV (3 dígitos)" maxLength="3" value={newCard.cvv} onChange={handleCardChange} style={styles.input} />
+              </div>
+            </div>
+          )}
+
+          <button type="submit" style={styles.checkoutBtn}>Confirmar Compra</button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 export default Cart;

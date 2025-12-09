@@ -2,13 +2,21 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import db from './config/db.js';
+
+// Rutas
 import productRoutes from './routes/productRoutes.js';
-import authRoutes from './routes/authRoutes.js'; 
-import User from './models/UserModel.js';
-import Product from './models/ProductModel.js';
+import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js'; 
-import PaymentMethod from './models/PaymentMethodModel.js'; 
+import paymentRoutes from './routes/paymentRoutes.js';
+
+// Modelos (Importamos para asegurar que Sequelize registre las relaciones antes de sincronizar)
+import './models/UserModel.js';
+import './models/ProductModel.js';
+import './models/PaymentMethodModel.js';
+import './models/ProductImageModel.js';
+import './models/ReviewModel.js';
+import './models/AddressModel.js';
+
 dotenv.config();
 
 const app = express();
@@ -17,12 +25,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Rutas
-app.use('/api/products', productRoutes);
-app.use('/api/auth', authRoutes); 
+// Definición de Rutas
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 
@@ -31,8 +36,9 @@ const conectarDB = async () => {
         await db.authenticate();
         console.log('Conexión exitosa a la base de datos MySQL');
         
-        await db.sync(); 
-        console.log('Tablas sincronizadas correctamente');
+        // alter: true actualiza la estructura de las tablas existentes y crea las nuevas
+        await db.sync({ alter: true }); 
+        console.log('Tablas y Modelos sincronizados correctamente');
     } catch (error) {
         console.error('Error al conectar a la base de datos:', error);
     }

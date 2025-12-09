@@ -7,15 +7,15 @@ import Register from './pages/Register';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders'; 
 import Wallet from './pages/Wallet'; 
-
 import OperatorPanel from './pages/OperatorPanel';
+import Inventory from './pages/Inventory'; 
+import ProductDetail from './pages/ProductDetail'; // <--- IMPORTACIÓN NUEVA
 import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -31,7 +31,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* --- BARRA DE NAVEGACIÓN (NAVBAR) --- */}
+      {/* NAVBAR */}
       <nav style={{ 
         padding: '15px 30px', 
         borderBottom: '1px solid #e0e0e0', 
@@ -42,7 +42,6 @@ function App() {
         alignItems: 'center',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
       }}>
-        {/* Lado Izquierdo */}
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <Link to="/" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold', fontSize: '1.2rem' }}>
             📱 MobiStore
@@ -52,15 +51,18 @@ function App() {
           </Link>
         </div>
         
-        {/* Lado Derecho (Menú Usuario) */}
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {user ? (
             <>
-              {/* ESTE BOTÓN SOLO APARECE SI ERES ADMIN U OPERADOR */}
               {(user.role === 'operator' || user.role === 'admin') && (
+                <>
                  <Link to="/operator" style={{ textDecoration: 'none', color: '#d63384', fontWeight: 'bold', border: '1px solid #d63384', padding: '5px 10px', borderRadius: '5px' }}>
                    🛠️ Panel Operador
                  </Link>
+                 <Link to="/inventory" style={{ textDecoration: 'none', color: '#198754', fontWeight: 'bold', border: '1px solid #198754', padding: '5px 10px', borderRadius: '5px' }}>
+                   📋 Inventario
+                 </Link>
+                </>
               )}
 
               <Link to="/orders" style={{ textDecoration: 'none', color: '#007bff', fontWeight: 'bold' }}>
@@ -95,24 +97,31 @@ function App() {
         </div>
       </nav>
 
-      {/* --- RUTAS DE LA APP --- */}
+      {/* RUTAS */}
       <Routes>
         <Route path="/" element={<Home />} />
+        {/* RUTA NUEVA: DETALLE DE PRODUCTO */}
+        <Route path="/product/:id" element={<ProductDetail />} />
+        
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
         <Route path="/cart" element={<Cart />} />
-        
-        {/* Rutas de Cliente */}
         <Route path="/orders" element={user ? <Orders /> : <Navigate to="/login" />} />
         <Route path="/wallet" element={user ? <Wallet /> : <Navigate to="/login" />} />
 
-        {/* --- RUTA NUEVA: PANEL DE OPERADOR --- */}
         <Route 
           path="/operator" 
           element={
-            // Protección: Solo entra si hay usuario Y su rol es admin u operador
             user && (user.role === 'operator' || user.role === 'admin') 
             ? <OperatorPanel /> 
+            : <Navigate to="/" />
+          } 
+        />
+        <Route 
+          path="/inventory" 
+          element={
+            user && (user.role === 'operator' || user.role === 'admin') 
+            ? <Inventory /> 
             : <Navigate to="/" />
           } 
         />

@@ -1,125 +1,115 @@
-import { useEffect, useState } from 'react';
-import '../App.css';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-// Función auxiliar para obtener el usuario logueado
-const getLoggedInUser = () => {
-    const userString = localStorage.getItem('user');
-    return userString ? JSON.parse(userString) : null;
-}
+const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-function Home() {
-    const [products, setProducts] = useState([]);
-    const [user, setUser] = useState(getLoggedInUser());
-    const [form, setForm] = useState({
-        name: '',
-        description: '',
-        price: '',
-        stock: '',
-        category: ''
-    });
+  const styles = {
+    container: { padding: '30px', maxWidth: '1200px', margin: '0 auto' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px' },
+    card: { border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', transition: 'transform 0.2s' },
+    imageContainer: { height: '200px', width: '100%', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer' },
+    image: { width: '100%', height: '100%', objectFit: 'contain' }, 
+    info: { padding: '15px' },
+    category: { fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' },
+    name: { fontSize: '1.1rem', fontWeight: 'bold', margin: '5px 0', color: '#333', cursor: 'pointer' },
+    price: { fontSize: '1.2rem', color: '#28a745', fontWeight: 'bold' },
+    delivery: { fontSize: '0.85rem', color: '#007bff', marginTop: '5px' },
+    button: { width: '100%', padding: '10px', backgroundColor: '#333', color: 'white', border: 'none', cursor: 'pointer', marginTop: '10px', fontWeight: 'bold' }
+  };
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-    const fetchProducts = () => {
-        fetch('http://localhost:5000/api/products')
-            .then(res => res.json())
-            .then(data => setProducts(data))
-            .catch(error => console.error('Error:', error));
-    };
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/products');
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error("Error al cargar el catálogo:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
+  const addToCart = (product) => {
+    const user = localStorage.getItem('user');
+    if (!user) {
+      return navigate('/login');
+    }
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        
-        if (!user || (user.role !== 'admin' && user.role !== 'operator')) {
-            alert("No tienes permisos para agregar productos.");
-            return;
-        }
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingIndex = cart.findIndex(item => item.id === product.id);
+    
+    if (existingIndex >= 0) {
+      cart[existingIndex].quantity += 1;
+    } else {
+      const mainImage = (product.ProductImages && product.ProductImages.length > 0) 
+        ? product.ProductImages[0].imageUrl 
+        : 'https://via.placeholder.com/150?text=Sin+Foto';
 
-        fetch('http://localhost:5000/api/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form)
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert('Producto agregado correctamente');
-            setForm({ name: '', description: '', price: '', stock: '', category: '' });
-            fetchProducts();
-        })
-        .catch(error => console.error('Error:', error));
-    };
+      cart.push({ ...product, quantity: 1, image: mainImage });
+    }
 
-    // --- FUNCIÓN NUEVA: AÑADIR AL CARRITO ---
-    const addToCart = (product) => {
-        // 1. Leemos lo que ya hay en el carrito (o creamos un arreglo vacío)
-        const currentCart = JSON.parse(localStorage.getItem('cart')) || [];
-        
-        // 2. Agregamos el producto seleccionado
-        currentCart.push(product);
-        
-        // 3. Guardamos de nuevo en el navegador
-        localStorage.setItem('cart', JSON.stringify(currentCart));
-        
-        alert(`${product.name} agregado al carrito 🛒`);
-    };
+    localStorage.setItem('cart', JSON.stringify(cart));
+    alert(`¡${product.name} agregado al carrito!`);
+  };
 
-    // Solo Admin u Operator pueden ver el formulario de crear productos
-    const canSeeForm = user && (user.role === 'admin' || user.role === 'operator');
+  const goToDetail = (id) => {
+    navigate(`/product/${id}`);
+  };
 
-    return (
-        <div className="App" style={{ padding: '20px' }}>
-            <h1>Panel de Productos - MobiStore 📱</h1>
-            
-            {/* Formulario solo visible para personal autorizado */}
-            {canSeeForm && (
-                <div style={{ marginBottom: '40px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', maxWidth: '400px', margin: '20px auto', backgroundColor: '#fff' }}>
-                    <h2>Agregar Nuevo Producto</h2>
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <input type="text" name="name" placeholder="Nombre del producto" value={form.name} onChange={handleChange} required style={{ padding: '8px' }}/>
-                        <textarea name="description" placeholder="Descripción" value={form.description} onChange={handleChange} style={{ padding: '8px' }}/>
-                        <input type="number" name="price" placeholder="Precio" value={form.price} onChange={handleChange} required style={{ padding: '8px' }}/>
-                        <input type="number" name="stock" placeholder="Stock disponible" value={form.stock} onChange={handleChange} required style={{ padding: '8px' }}/>
-                        <select name="category" value={form.category} onChange={handleChange} required style={{ padding: '8px' }}>
-                            <option value="">Selecciona una categoría</option>
-                            <option value="Celulares">Celulares</option>
-                            <option value="Accesorios">Accesorios</option>
-                            <option value="Tablets">Tablets</option>
-                        </select>
-                        <button type="submit" style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px' }}>
-                            Guardar Producto
-                        </button>
-                    </form>
+  if (loading) return <div style={{textAlign: 'center', padding: '50px'}}>Cargando catálogo...</div>;
+
+  return (
+    <div style={styles.container}>
+      <h1 style={{ marginBottom: '20px', textAlign: 'center', color: '#333' }}>Nuestros Productos</h1>
+      
+      {products.length === 0 ? (
+        <p style={{textAlign: 'center'}}>No hay productos disponibles por el momento.</p>
+      ) : (
+        <div style={styles.grid}>
+          {products.map((product) => {
+            const productImg = (product.ProductImages && product.ProductImages.length > 0) 
+              ? product.ProductImages[0].imageUrl 
+              : 'https://via.placeholder.com/300x200?text=Sin+Imagen';
+
+            return (
+              <div key={product.id} style={styles.card}>
+                <div style={styles.imageContainer} onClick={() => goToDetail(product.id)}>
+                  <img src={productImg} alt={product.name} style={styles.image} />
                 </div>
-            )}
+                
+                <div style={styles.info}>
+                  <div style={styles.category}>{product.category}</div>
+                  <div style={styles.name} onClick={() => goToDetail(product.id)}>
+                    {product.name}
+                  </div>
+                  <div style={styles.price}>${product.price}</div>
+                  
+                  <div style={styles.delivery}>
+                    🚚 Llega en {product.delivery_days || 3} días
+                  </div>
 
-            <h2>Catálogo</h2>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {products.map((product) => (
-                    <div key={product.id} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '10px', width: '250px', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                        <h3>{product.name}</h3>
-                        <p style={{ color: '#555', fontSize: '0.9rem' }}>{product.description}</p>
-                        <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#333' }}>${product.price}</p>
-                        <p style={{ fontSize: '0.8rem' }}>Stock: {product.stock}</p>
-                        <p style={{ fontSize: '0.8rem', color: '#777' }}>Categoría: {product.category}</p>
-                        
-                        {/* --- BOTÓN NUEVO CON FUNCIONALIDAD --- */}
-                        <button 
-                            onClick={() => addToCart(product)} 
-                            style={{ width: '100%', marginTop: '10px', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-                        >
-                            Añadir al Carrito 🛒
-                        </button>
-                    </div>
-                ))}
-            </div>
+                  <button 
+                    style={styles.button}
+                    onClick={() => addToCart(product)}
+                    disabled={product.stock <= 0} 
+                  >
+                    {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-    );
-}
+      )}
+    </div>
+  );
+};
 
 export default Home;
