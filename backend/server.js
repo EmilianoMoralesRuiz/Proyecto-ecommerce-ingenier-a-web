@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import db from './config/db.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 // Rutas
 import productRoutes from './routes/productRoutes.js';
@@ -34,6 +35,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 const conectarDB = async () => {
     try {
