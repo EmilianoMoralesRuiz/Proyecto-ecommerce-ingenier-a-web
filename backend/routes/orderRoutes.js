@@ -1,16 +1,19 @@
 import express from 'express';
-import { createOrder, getOrders, updateOrderStatus } from '../controllers/orderController.js';
+import { createOrder, getOrders, updateOrderStatus, getSalesReport } from '../controllers/orderController.js';
 import { verifyToken } from '../controllers/authController.js'; 
 
 const router = express.Router();
 
+// Reporte de Ventas (Ruta nueva)
+router.get('/report', verifyToken, getSalesReport);
+
 // Crear orden
 router.post('/', verifyToken, createOrder);
 
-// Obtener órdenes (sirve para Cliente y Operador gracias a la lógica del controlador)
+// Obtener órdenes
 router.get('/', verifyToken, getOrders);
 
-// Actualizar estatus (solo operadores/admin deberían poder, pero validamos en frontend por ahora)
+// Actualizar estatus
 router.put('/:id', verifyToken, updateOrderStatus);
 
 export default router;

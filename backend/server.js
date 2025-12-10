@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import db from './config/db.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 // Rutas
 import productRoutes from './routes/productRoutes.js';
@@ -12,6 +13,8 @@ import paymentRoutes from './routes/paymentRoutes.js';
 // Modelos (Importamos para asegurar que Sequelize registre las relaciones antes de sincronizar)
 import './models/UserModel.js';
 import './models/ProductModel.js';
+import './models/OrderModel.js';
+import './models/OrderItemModel.js';
 import './models/PaymentMethodModel.js';
 import './models/ProductImageModel.js';
 import './models/ReviewModel.js';
@@ -30,6 +33,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 const conectarDB = async () => {
     try {
