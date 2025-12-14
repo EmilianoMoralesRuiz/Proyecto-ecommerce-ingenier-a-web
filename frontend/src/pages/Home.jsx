@@ -3,11 +3,37 @@ import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]); // Estado para productos filtrados
+  const [categories, setCategories] = useState([]); // Lista de categorías
+  const [selectedCategory, setSelectedCategory] = useState('Todas'); // Categoría activa
   const [loading, setLoading] = useState(true);
+  
   const navigate = useNavigate();
 
   const styles = {
     container: { padding: '30px', maxWidth: '1200px', margin: '0 auto' },
+    
+    // ESTILOS NUEVOS PARA FILTROS
+    filterContainer: { 
+      display: 'flex', 
+      gap: '15px', 
+      marginBottom: '30px', 
+      overflowX: 'auto', 
+      paddingBottom: '10px',
+      borderBottom: '1px solid #eee'
+    },
+    filterBtn: (isActive) => ({
+      padding: '8px 20px',
+      borderRadius: '20px',
+      border: isActive ? 'none' : '1px solid #ddd',
+      backgroundColor: isActive ? '#333' : 'white',
+      color: isActive ? 'white' : '#555',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      whiteSpace: 'nowrap',
+      transition: 'all 0.2s'
+    }),
+
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '25px' },
     card: { border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', transition: 'transform 0.2s' },
     imageContainer: { height: '200px', width: '100%', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer' },
@@ -29,10 +55,28 @@ const Home = () => {
       const response = await fetch('http://localhost:5000/api/products');
       const data = await response.json();
       setProducts(data);
+      setFilteredProducts(data); // Al inicio mostramos todos
+
+      // EXTRAER CATEGORÍAS ÚNICAS AUTOMÁTICAMENTE
+      // Usamos Set para eliminar duplicados y luego lo convertimos a array
+      const uniqueCategories = ['Todas', ...new Set(data.map(p => p.category))];
+      setCategories(uniqueCategories);
+
     } catch (error) {
       console.error("Error al cargar el catálogo:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para filtrar al dar clic
+  const handleFilter = (category) => {
+    setSelectedCategory(category);
+    if (category === 'Todas') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(p => p.category === category);
+      setFilteredProducts(filtered);
     }
   };
 
@@ -67,13 +111,31 @@ const Home = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={{ marginBottom: '20px', textAlign: 'center', color: '#333' }}>Nuestros Productos</h1>
+      <h1 style={{ marginBottom: '10px', color: '#333' }}>Nuestros Productos</h1>
       
-      {products.length === 0 ? (
-        <p style={{textAlign: 'center'}}>No hay productos disponibles por el momento.</p>
+      {/* BARRA DE CATEGORÍAS */}
+      <div style={styles.filterContainer}>
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            style={styles.filterBtn(selectedCategory === cat)}
+            onClick={() => handleFilter(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      
+      {filteredProducts.length === 0 ? (
+        <div style={{textAlign: 'center', padding: '40px', color: '#666'}}>
+          <p>No se encontraron productos en esta categoría.</p>
+          <button onClick={() => handleFilter('Todas')} style={{marginTop: '10px', cursor:'pointer', background:'none', border:'none', color:'#007bff', textDecoration:'underline'}}>
+            Ver todos los productos
+          </button>
+        </div>
       ) : (
         <div style={styles.grid}>
-          {products.map((product) => {
+          {filteredProducts.map((product) => {
             const productImg = (product.ProductImages && product.ProductImages.length > 0) 
               ? product.ProductImages[0].imageUrl 
               : 'https://via.placeholder.com/300x200?text=Sin+Imagen';

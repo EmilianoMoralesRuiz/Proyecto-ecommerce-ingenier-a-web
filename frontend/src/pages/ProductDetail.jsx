@@ -5,9 +5,11 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [reviews, setReviews] = useState([]); // Lista de reseñas
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState('');
   
+  // Formulario reseña
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
 
@@ -23,22 +25,35 @@ const ProductDetail = () => {
     desc: { lineHeight: '1.6', color: '#555', marginBottom: '20px' },
     meta: { fontSize: '0.9rem', color: '#777', marginBottom: '10px' },
     btn: { padding: '15px 30px', backgroundColor: '#333', color: 'white', border: 'none', fontSize: '1rem', cursor: 'pointer', borderRadius: '5px' },
+    
+    // Estilos Reseñas
     reviewSection: { marginTop: '50px', width: '100%', borderTop: '1px solid #eee', paddingTop: '30px' },
-    star: { cursor: 'pointer', fontSize: '1.5rem', color: '#ffc107' }
+    star: { cursor: 'pointer', fontSize: '1.5rem', color: '#ffc107' },
+    reviewCard: { backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px' },
+    reviewUser: { fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '5px' }
   };
 
   useEffect(() => {
-    fetchProduct();
+    fetchProductAndReviews();
   }, [id]);
 
-  const fetchProduct = async () => {
+  const fetchProductAndReviews = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`);
-      const data = await res.json();
-      setProduct(data);
-      if (data.ProductImages && data.ProductImages.length > 0) {
-        setSelectedImage(data.ProductImages[0].imageUrl);
+      // 1. Cargar Producto
+      const resProd = await fetch(`http://localhost:5000/api/products/${id}`);
+      const dataProd = await resProd.json();
+      setProduct(dataProd);
+      if (dataProd.ProductImages && dataProd.ProductImages.length > 0) {
+        setSelectedImage(dataProd.ProductImages[0].imageUrl);
       }
+
+      // 2. Cargar Reseñas
+      const resRev = await fetch(`http://localhost:5000/api/reviews/${id}`);
+      if (resRev.ok) {
+        const dataRev = await resRev.json();
+        setReviews(dataRev);
+      }
+
     } catch (error) {
       console.error(error);
     } finally {
@@ -62,11 +77,42 @@ const ProductDetail = () => {
     alert('Añadido al carrito');
   };
 
-  const submitReview = (e) => {
+  const submitReview = async (e) => {
     e.preventDefault();
-    alert(`¡Gracias! Tu calificación de ${rating} estrellas ha sido guardada.`);
-    setComment('');
+    const token = localStorage.getItem('token');
+    if (!token) return alert('Debes iniciar sesión para opinar.');
+
+    try {
+      const res = await fetch('http://localhost:5000/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          productId: id,
+          rating,
+          comment
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('¡Gracias por tu opinión!');
+        setComment('');
+        fetchProductAndReviews(); // Recargar para ver la nueva reseña
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      alert('Error de conexión');
+    }
   };
+
+  // Calcular promedio
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+    : 'Nueva';
 
   if (loading) return <div>Cargando...</div>;
   if (!product) return <div>Producto no encontrado</div>;
@@ -92,6 +138,12 @@ const ProductDetail = () => {
       <div style={styles.info}>
         <h1 style={styles.title}>{product.name}</h1>
         <div style={styles.price}>${product.price}</div>
+        
+        {/* Promedio visual */}
+        <div style={{marginBottom: '15px', color: '#ffc107', fontWeight: 'bold', fontSize: '1.2rem'}}>
+          ★ {averageRating} <span style={{color: '#777', fontSize: '0.9rem', fontWeight: 'normal'}}>({reviews.length} opiniones)</span>
+        </div>
+
         <div style={styles.meta}>Categoría: {product.category}</div>
         <div style={styles.meta}>Stock: {product.stock} unidades</div>
         <div style={styles.meta}>Entrega estimada: {product.delivery_days} días</div>
@@ -103,12 +155,14 @@ const ProductDetail = () => {
         </button>
       </div>
 
-      {/* SECCIÓN DE RESEÑAS Y ESTRELLAS */}
+      {/* SECCIÓN DE RESEÑAS */}
       <div style={styles.reviewSection}>
-        <h2>⭐ Calificaciones y Recomendaciones</h2>
-        <form onSubmit={submitReview} style={{marginTop: '20px', maxWidth: '500px'}}>
+        <h2>⭐ Opiniones de Clientes</h2>
+        
+        {/* Formulario */}
+        <form onSubmit={submitReview} style={{marginTop: '20px', maxWidth: '500px', marginBottom: '40px'}}>
+            <h4 style={{marginBottom: '10px'}}>Deja tu valoración:</h4>
             <div style={{marginBottom: '10px'}}>
-                <label>Tu Calificación: </label>
                 {[1, 2, 3, 4, 5].map((star) => (
                     <span key={star} style={styles.star} onClick={() => setRating(star)}>
                         {star <= rating ? '★' : '☆'}
@@ -116,13 +170,35 @@ const ProductDetail = () => {
                 ))}
             </div>
             <textarea 
-                placeholder="Escribe tu recomendación o comentario..." 
+                placeholder="¿Qué te pareció el producto?" 
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 style={{width: '100%', padding: '10px', height: '80px', marginBottom: '10px'}}
             />
-            <button type="submit" style={{...styles.btn, padding: '10px 20px', fontSize: '0.9rem'}}>Enviar Reseña</button>
+            <button type="submit" style={{...styles.btn, padding: '10px 20px', fontSize: '0.9rem'}}>Publicar Opinión</button>
         </form>
+
+        {/* Lista de comentarios */}
+        <div>
+          {reviews.length === 0 ? (
+            <p style={{color: '#777'}}>Este producto aún no tiene reseñas. ¡Sé el primero!</p>
+          ) : (
+            reviews.map(rev => (
+              <div key={rev.id} style={styles.reviewCard}>
+                <div style={styles.reviewUser}>
+                   👤 {rev.User ? rev.User.name : 'Usuario'} 
+                   <span style={{color: '#ffc107', marginLeft: '10px'}}>
+                     {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                   </span>
+                </div>
+                <div style={{color: '#555'}}>{rev.comment}</div>
+                <div style={{fontSize: '0.75rem', color: '#aaa', marginTop: '5px'}}>
+                  {new Date(rev.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

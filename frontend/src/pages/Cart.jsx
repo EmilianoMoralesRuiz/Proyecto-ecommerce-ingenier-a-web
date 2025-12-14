@@ -24,7 +24,11 @@ const Cart = () => {
   const loadCart = () => {
     const storedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCart(storedCart);
-    const sum = storedCart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    calculateTotal(storedCart);
+  };
+
+  const calculateTotal = (items) => {
+    const sum = items.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
     setTotal(sum);
   };
 
@@ -50,12 +54,36 @@ const Cart = () => {
     }
   };
 
+  // --- NUEVA FUNCIÓN: CAMBIAR CANTIDAD ---
+  const handleQuantityChange = (id, newQty) => {
+    const quantity = parseInt(newQty);
+
+    // 1. Validaciones básicas
+    if (quantity < 1) return; // No permitir menos de 1
+
+    const updatedCart = cart.map(item => {
+      if (item.id === id) {
+        // 2. Validación de Stock: No dejar seleccionar más de lo que existe
+        if (item.stock && quantity > item.stock) {
+          alert(`Solo tenemos ${item.stock} unidades disponibles de este producto.`);
+          return { ...item, quantity: item.stock };
+        }
+        return { ...item, quantity: quantity };
+      }
+      return item;
+    });
+
+    // 3. Guardar cambios
+    setCart(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    calculateTotal(updatedCart);
+  };
+
   const handleRemove = (id) => {
     const updatedCart = cart.filter(item => item.id !== id);
     setCart(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-    const sum = updatedCart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
-    setTotal(sum);
+    calculateTotal(updatedCart);
   };
 
   const handleAddressChange = (e) => setAddress({ ...address, [e.target.name]: e.target.value });
@@ -77,7 +105,6 @@ const Cart = () => {
     }
 
     try {
-      // 1. GESTIÓN DE TARJETA
       if (selectedCard === 'new') {
         if (!newCard.card_number || !newCard.cvv || !newCard.expiration || !newCard.card_holder) {
             return alert('Debes llenar los datos de la tarjeta o seleccionar una existente');
@@ -102,11 +129,8 @@ const Cart = () => {
             const errData = await saveCardRes.json();
             return alert('Error al guardar la tarjeta: ' + errData.message);
         }
-        
-        console.log("Tarjeta nueva guardada y validada.");
       }
 
-      // 2. CREACIÓN DE ORDEN
       const fullAddress = `${address.street} #${address.exterior_number}, Col. ${address.neighborhood}, ${address.city}, CP ${address.zip_code}`;
 
       const orderData = {
@@ -146,11 +170,14 @@ const Cart = () => {
     itemsSection: { flex: '1.5', minWidth: '300px' },
     summarySection: { flex: '1', minWidth: '350px', backgroundColor: '#f8f9fa', padding: '25px', borderRadius: '10px', height: 'fit-content' },
     itemCard: { display: 'flex', alignItems: 'center', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #eee' },
-    img: { width: '70px', height: '70px', objectFit: 'contain', marginRight: '15px', border: '1px solid #ddd', borderRadius: '5px' },
+    img: { width: '80px', height: '80px', objectFit: 'contain', marginRight: '15px', border: '1px solid #ddd', borderRadius: '5px' },
     input: { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc' },
     label: { display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '0.9rem', color: '#555', marginTop: '10px' },
     sectionTitle: { marginBottom: '15px', borderBottom: '2px solid #ddd', paddingBottom: '5px', color: '#333' },
-    checkoutBtn: { width: '100%', padding: '15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', marginTop: '20px' }
+    checkoutBtn: { width: '100%', padding: '15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', marginTop: '20px' },
+    
+    // Estilo para el input de cantidad
+    qtyInput: { width: '60px', padding: '5px', borderRadius: '5px', border: '1px solid #ccc', textAlign: 'center', marginLeft: '10px' }
   };
 
   if (cart.length === 0) {
@@ -169,24 +196,43 @@ const Cart = () => {
         {cart.map((item, index) => (
           <div key={index} style={styles.itemCard}>
             <img src={item.image || 'https://via.placeholder.com/80'} alt={item.name} style={styles.img} />
+            
             <div style={{ flex: 1 }}>
               <h4 style={{ margin: 0 }}>{item.name}</h4>
-              <p style={{ margin: '5px 0', color: '#666' }}>Cant: {item.quantity}</p>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>${item.price * item.quantity}</p>
+              
+              {/* --- CONTROL DE CANTIDAD NUEVO --- */}
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px', marginBottom: '5px' }}>
+                <span style={{color: '#666'}}>Cantidad:</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  max={item.stock} // Límite basado en el stock real
+                  value={item.quantity}
+                  onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                  style={styles.qtyInput}
+                />
+                <span style={{fontSize: '0.8rem', color: '#888', marginLeft: '10px'}}>
+                  (Disp: {item.stock})
+                </span>
+              </div>
+              
+              <p style={{ margin: 0, fontWeight: 'bold', color: '#28a745' }}>
+                Subtotal: ${item.price * item.quantity}
+              </p>
             </div>
-            <button onClick={() => handleRemove(item.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>🗑️</button>
+
+            <button onClick={() => handleRemove(item.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }} title="Eliminar">🗑️</button>
           </div>
         ))}
       </div>
 
       <div style={styles.summarySection}>
-        <h2 style={{marginTop: 0}}>Resumen: ${total}</h2>
+        <h2 style={{marginTop: 0}}>Total a Pagar: ${total}</h2>
         <form onSubmit={handleCheckout}>
           
           <h4 style={styles.sectionTitle}>📍 Dirección de Envío</h4>
           <input name="street" placeholder="Calle" required onChange={handleAddressChange} style={styles.input} />
           
-          {/* AQUÍ ESTABA EL ERROR ANTES, AHORA ESTÁ CORREGIDO */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <input name="exterior_number" placeholder="Número Ext." required onChange={handleAddressChange} style={styles.input} />
             <input name="zip_code" placeholder="C.P." required onChange={handleAddressChange} style={styles.input} />
