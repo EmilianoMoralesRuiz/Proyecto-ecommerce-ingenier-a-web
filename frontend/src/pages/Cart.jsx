@@ -37,7 +37,7 @@ const Cart = () => {
     if (!token) return;
 
     try {
-      const res = await fetch('http://localhost:5000/api/payments', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/payments', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -110,7 +110,7 @@ const Cart = () => {
             return alert('Debes llenar los datos de la tarjeta o seleccionar una existente');
         }
 
-        const saveCardRes = await fetch('http://localhost:5000/api/payments', {
+        const saveCardRes = await fetch('https://mobistore-backend.onrender.com/api/payments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ const Cart = () => {
         status: 'paid' 
       };
 
-      const orderRes = await fetch('http://localhost:5000/api/orders', {
+      const orderRes = await fetch('https://mobistore-backend.onrender.com/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

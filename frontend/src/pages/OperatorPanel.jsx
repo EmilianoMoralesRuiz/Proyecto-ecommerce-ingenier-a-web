@@ -42,7 +42,7 @@ const OperatorPanel = () => {
   const fetchOrders = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/orders', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -58,7 +58,7 @@ const OperatorPanel = () => {
   const handleStatusChange = async (id, newStatus) => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${id}`, {
+      const res = await fetch(`https://mobistore-backend.onrender.com/api/orders/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ const OperatorPanel = () => {
 
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${id}`, {
+      const res = await fetch(`https://mobistore-backend.onrender.com/api/orders/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

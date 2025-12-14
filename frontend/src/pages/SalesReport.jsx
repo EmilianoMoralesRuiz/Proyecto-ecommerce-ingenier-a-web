@@ -28,7 +28,7 @@ const SalesReport = () => {
   const fetchReport = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/orders/report', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/orders/report', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

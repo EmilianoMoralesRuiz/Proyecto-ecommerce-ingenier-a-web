@@ -50,7 +50,7 @@ const Wallet = () => {
     if (!token) return;
 
     try {
-      const res = await fetch('http://localhost:5000/api/payments', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/payments', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -75,7 +75,7 @@ const Wallet = () => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     try {
-      const res = await fetch('http://localhost:5000/api/payments', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

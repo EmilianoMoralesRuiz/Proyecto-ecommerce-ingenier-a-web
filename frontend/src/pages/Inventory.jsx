@@ -38,7 +38,7 @@ const Inventory = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/products');
+      const res = await fetch('https://mobistore-backend.onrender.com/api/products');
       const data = await res.json();
       setProducts(data);
       setLoading(false);
@@ -63,11 +63,11 @@ const Inventory = () => {
     };
 
     try {
-      let url = 'http://localhost:5000/api/products';
+      let url = 'https://mobistore-backend.onrender.com/api/products';
       let method = 'POST';
 
       if (editingProduct) {
-        url = `http://localhost:5000/api/products/${editingProduct.id}`;
+        url = `https://mobistore-backend.onrender.com/api/products/${editingProduct.id}`;
         method = 'PUT';
       }
 
@@ -117,7 +117,7 @@ const Inventory = () => {
 
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+      const res = await fetch(`https://mobistore-backend.onrender.com/api/products/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

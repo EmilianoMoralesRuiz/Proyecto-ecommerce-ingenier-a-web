@@ -23,7 +23,7 @@ const UsersList = () => {
     const token = localStorage.getItem('token');
     // Nota: Necesitas haber configurado la ruta en el backend (/api/users) previamente
     try {
-        const res = await fetch('http://localhost:5000/api/users', {
+        const res = await fetch('https://mobistore-backend.onrender.com/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -35,7 +35,7 @@ const UsersList = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar usuario?')) return;
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+    const res = await fetch(`https://mobistore-backend.onrender.com/api/users/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });

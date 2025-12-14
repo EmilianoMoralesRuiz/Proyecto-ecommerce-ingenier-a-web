@@ -40,7 +40,7 @@ const ProductDetail = () => {
   const fetchProductAndReviews = async () => {
     try {
       // 1. Cargar Producto
-      const resProd = await fetch(`http://localhost:5000/api/products/${id}`);
+      const resProd = await fetch(`https://mobistore-backend.onrender.com/api/products/${id}`);
       const dataProd = await resProd.json();
       setProduct(dataProd);
       if (dataProd.ProductImages && dataProd.ProductImages.length > 0) {
@@ -48,7 +48,7 @@ const ProductDetail = () => {
       }
 
       // 2. Cargar Reseñas
-      const resRev = await fetch(`http://localhost:5000/api/reviews/${id}`);
+      const resRev = await fetch(`https://mobistore-backend.onrender.com/api/reviews/${id}`);
       if (resRev.ok) {
         const dataRev = await resRev.json();
         setReviews(dataRev);
@@ -83,7 +83,7 @@ const ProductDetail = () => {
     if (!token) return alert('Debes iniciar sesión para opinar.');
 
     try {
-      const res = await fetch('http://localhost:5000/api/reviews', {
+      const res = await fetch('https://mobistore-backend.onrender.com/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
