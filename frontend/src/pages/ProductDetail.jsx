@@ -83,7 +83,7 @@ const ProductDetail = () => {
     if (!token) return alert('Debes iniciar sesión para opinar.');
 
     try {
-      const res = await fetch('https://mobistore-backend.onrender.com/api/reviews', {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

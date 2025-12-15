@@ -23,7 +23,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('https://mobistore-backend.onrender.com/api/orders', {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/api/orders', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

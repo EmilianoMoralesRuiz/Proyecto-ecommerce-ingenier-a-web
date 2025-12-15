@@ -5,7 +5,7 @@ function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    const response = await fetch('https://mobistore-backend.onrender.com/api/auth/register', {
+    const response = await fetch(import.meta.env.VITE_API_URL + '/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)

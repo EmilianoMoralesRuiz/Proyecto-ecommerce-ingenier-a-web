@@ -52,7 +52,7 @@ const Home = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('https://mobistore-backend.onrender.com/api/products');
+      const response = await fetch(import.meta.env.VITE_API_URL + '/api/products');
       const data = await response.json();
       setProducts(data);
       setFilteredProducts(data); // Al inicio mostramos todos

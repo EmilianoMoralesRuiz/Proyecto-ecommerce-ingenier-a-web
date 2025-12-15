@@ -38,7 +38,7 @@ const Inventory = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('https://mobistore-backend.onrender.com/api/products');
+      const res = await fetch(import.meta.env.VITE_API_URL + '/api/products');
       const data = await res.json();
       setProducts(data);
       setLoading(false);
@@ -63,7 +63,7 @@ const Inventory = () => {
     };
 
     try {
-      let url = 'https://mobistore-backend.onrender.com/api/products';
+      let url = import.meta.env.VITE_API_URL + '/api/products';
       let method = 'POST';
 
       if (editingProduct) {

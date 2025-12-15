@@ -23,7 +23,7 @@ const UsersList = () => {
     const token = localStorage.getItem('token');
     // Nota: Necesitas haber configurado la ruta en el backend (/api/users) previamente
     try {
-        const res = await fetch('https://mobistore-backend.onrender.com/api/users', {
+        const res = await fetch(import.meta.env.VITE_API_URL + '/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
