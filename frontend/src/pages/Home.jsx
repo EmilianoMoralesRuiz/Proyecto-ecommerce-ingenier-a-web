@@ -3,17 +3,46 @@ import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]); // Estado para productos filtrados
-  const [categories, setCategories] = useState([]); // Lista de categorías
-  const [selectedCategory, setSelectedCategory] = useState('Todas'); // Categoría activa
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const navigate = useNavigate();
 
   const styles = {
     container: { padding: '30px', maxWidth: '1200px', margin: '0 auto' },
     
-    // ESTILOS NUEVOS PARA FILTROS
+    searchContainer: { 
+      display: 'flex', 
+      justifyContent: 'center', 
+      marginBottom: '25px' 
+    },
+    searchForm: { 
+      display: 'flex', 
+      width: '100%', 
+      maxWidth: '600px', 
+      gap: '10px' 
+    },
+    searchInput: { 
+      flex: 1, 
+      padding: '12px', 
+      borderRadius: '8px', 
+      border: '1px solid #ddd', 
+      fontSize: '16px', 
+      outline: 'none' 
+    },
+    searchButton: { 
+      padding: '12px 24px', 
+      backgroundColor: '#007bff', 
+      color: 'white', 
+      border: 'none', 
+      borderRadius: '8px', 
+      cursor: 'pointer', 
+      fontWeight: 'bold' 
+    },
+
     filterContainer: { 
       display: 'flex', 
       gap: '15px', 
@@ -50,18 +79,25 @@ const Home = () => {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (search = '') => {
+    setLoading(true);
     try {
-      const response = await fetch(import.meta.env.VITE_API_URL + '/api/products');
+      let url = `${import.meta.env.VITE_API_URL}/api/products`;
+      if (search) {
+        url += `?search=${encodeURIComponent(search)}`;
+      }
+
+      const response = await fetch(url);
       const data = await response.json();
+      
       setProducts(data);
-      setFilteredProducts(data); // Al inicio mostramos todos
+      setFilteredProducts(data);
 
-      // EXTRAER CATEGORÍAS ÚNICAS AUTOMÁTICAMENTE
-      // Usamos Set para eliminar duplicados y luego lo convertimos a array
-      const uniqueCategories = ['Todas', ...new Set(data.map(p => p.category))];
-      setCategories(uniqueCategories);
-
+      if (!search) {
+        const uniqueCategories = ['Todas', ...new Set(data.map(p => p.category))];
+        setCategories(uniqueCategories);
+      }
+      
     } catch (error) {
       console.error("Error al cargar el catálogo:", error);
     } finally {
@@ -69,7 +105,12 @@ const Home = () => {
     }
   };
 
-  // Función para filtrar al dar clic
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchProducts(searchTerm);
+    setSelectedCategory('Todas');
+  };
+
   const handleFilter = (category) => {
     setSelectedCategory(category);
     if (category === 'Todas') {
@@ -111,9 +152,23 @@ const Home = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={{ marginBottom: '10px', color: '#333' }}>Nuestros Productos</h1>
+      <h1 style={{ marginBottom: '20px', color: '#333', textAlign: 'center' }}>Nuestros Productos</h1>
       
-      {/* BARRA DE CATEGORÍAS */}
+      <div style={styles.searchContainer}>
+        <form onSubmit={handleSearch} style={styles.searchForm}>
+          <input
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button type="submit" style={styles.searchButton}>
+            Buscar
+          </button>
+        </form>
+      </div>
+
       <div style={styles.filterContainer}>
         {categories.map(cat => (
           <button 
@@ -128,8 +183,15 @@ const Home = () => {
       
       {filteredProducts.length === 0 ? (
         <div style={{textAlign: 'center', padding: '40px', color: '#666'}}>
-          <p>No se encontraron productos en esta categoría.</p>
-          <button onClick={() => handleFilter('Todas')} style={{marginTop: '10px', cursor:'pointer', background:'none', border:'none', color:'#007bff', textDecoration:'underline'}}>
+          <p>No se encontraron productos que coincidan con tu búsqueda.</p>
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              fetchProducts();
+              setSelectedCategory('Todas');
+            }} 
+            style={{marginTop: '10px', cursor:'pointer', background:'none', border:'none', color:'#007bff', textDecoration:'underline'}}
+          >
             Ver todos los productos
           </button>
         </div>

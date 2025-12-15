@@ -1,9 +1,23 @@
+import { Op } from 'sequelize';
 import Product from '../models/ProductModel.js';
 import ProductImage from '../models/ProductImageModel.js';
 
 export const getProducts = async (req, res) => {
     try {
+        const { search } = req.query;
+        let whereCondition = {};
+
+        if (search) {
+            whereCondition = {
+                [Op.or]: [
+                    { name: { [Op.like]: `%${search}%` } },
+                    { description: { [Op.like]: `%${search}%` } }
+                ]
+            };
+        }
+
         const products = await Product.findAll({
+            where: whereCondition,
             include: [{ model: ProductImage }]
         });
         res.json(products);
