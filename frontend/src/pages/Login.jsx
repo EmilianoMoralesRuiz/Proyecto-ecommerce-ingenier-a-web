@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const GOOGLE_CLIENT_ID = "872890595089-bso70jjfsmnoo0um8r4bqmuu2pmv353s.apps.googleusercontent.com";
 
   const styles = {
     pageContainer: {
@@ -73,6 +76,16 @@ function Login() {
       textDecoration: 'none',
       fontWeight: 'bold',
       marginLeft: '5px'
+    },
+    divider: {
+      margin: '20px 0',
+      borderTop: '1px solid #eee',
+      position: 'relative'
+    },
+    googleContainer: {
+      display: 'flex',
+      justifyContent: 'center',
+      marginTop: '10px'
     }
   };
 
@@ -91,7 +104,6 @@ function Login() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        
         window.location.href = '/'; 
       } else {
         setError(data.message || 'Error al iniciar sesión');
@@ -101,41 +113,74 @@ function Login() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } else {
+        setError(data.message || 'Fallo la autenticación con Google');
+      }
+    } catch (err) {
+      setError('Error conectando con Google');
+    }
+  };
+
   return (
-    <div style={styles.pageContainer}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Iniciar Sesión</h2>
-        
-        {error && <div style={styles.errorMessage}>⚠️ {error}</div>}
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <div style={styles.pageContainer}>
+        <div style={styles.card}>
+          <h2 style={styles.title}>Iniciar Sesión</h2>
+          
+          {error && <div style={styles.errorMessage}>⚠️ {error}</div>}
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <input 
-            type="email" 
-            placeholder="Correo electrónico" 
-            value={email}
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-            style={styles.input}
-          />
-          <input 
-            type="password" 
-            placeholder="Contraseña" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            style={styles.input}
-          />
-          <button type="submit" style={styles.button}>
-            Entrar
-          </button>
-        </form>
+          <form onSubmit={handleLogin} style={styles.form}>
+            <input 
+              type="email" 
+              placeholder="Correo electrónico" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              style={styles.input}
+            />
+            <input 
+              type="password" 
+              placeholder="Contraseña" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              style={styles.input}
+            />
+            <button type="submit" style={styles.button}>
+              Entrar
+            </button>
+          </form>
 
-        <div style={styles.registerLink}>
-          ¿No tienes una cuenta? 
-          <Link to="/register" style={styles.link}>Regístrate aquí</Link>
+          <div style={styles.divider}></div>
+          
+          <div style={styles.googleContainer}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Falló el inicio de sesión con Google')}
+              useOneTap
+            />
+          </div>
+
+          <div style={styles.registerLink}>
+            ¿No tienes una cuenta? 
+            <Link to="/register" style={styles.link}>Regístrate aquí</Link>
+          </div>
         </div>
       </div>
-    </div>
+    </GoogleOAuthProvider>
   );
 }
 
