@@ -12,7 +12,8 @@ import Inventory from './pages/Inventory';
 import ProductDetail from './pages/ProductDetail'; 
 import SalesReport from './pages/SalesReport'; 
 import UsersList from './pages/UsersList';
-import Footer from './components/Footer'; 
+import Footer from './components/Footer';
+import Checkout from './pages/Checkout.jsx';
 import './App.css';
 
 function App() {
@@ -121,6 +122,7 @@ function App() {
             <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/orders" element={user ? <Orders /> : <Navigate to="/login" />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/wallet" element={user ? <Wallet /> : <Navigate to="/login" />} />
 
             <Route 
