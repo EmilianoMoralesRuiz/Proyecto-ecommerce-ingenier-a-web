@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [step, setStep] = useState(1); 
   const [cart, setCart] = useState([]);
 
-  // Dirección
+  const [step, setStep] = useState(1);
+
   const [address, setAddress] = useState({
     fullName: "",
     phone: "",
@@ -18,258 +19,513 @@ const Checkout = () => {
     notes: "",
   });
 
-  // Pago
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [defaultAddressId, setDefaultAddressId] = useState(null);
+
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null); // null = creando nueva
+  const [saveAsDefault, setSaveAsDefault] = useState(true);
+
+  // tarjetas
   const [cards, setCards] = useState([]);
-  const [loadingCards, setLoadingCards] = useState(false);
-  const [selectedCardId, setSelectedCardId] = useState("");
-
-  useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (!user) return navigate("/login");
-
-    const savedCart = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(Array.isArray(savedCart) ? savedCart : []);
-
-   
-    const savedAddress = JSON.parse(localStorage.getItem("checkout_address") || "null");
-    if (savedAddress) setAddress(savedAddress);
-  }, [navigate]);
-
-  const { subtotal, totalItems } = useMemo(() => {
-    const subtotalCalc = cart.reduce((acc, item) => {
-      const price = Number(item.price) || 0;
-      const qty = Number(item.quantity) || 1;
-      return acc + price * qty;
-    }, 0);
-
-    const items = cart.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0);
-    return { subtotal: subtotalCalc, totalItems: items };
-  }, [cart]);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [loadingCards, setLoadingCards] = useState(true);
 
   const styles = {
-    container: { padding: "30px", maxWidth: "950px", margin: "0 auto" },
-    title: { marginBottom: "10px", color: "#333" },
-    subtitle: { color: "#666", marginBottom: "18px" },
-    card: {
+    container: { padding: "30px", maxWidth: "1100px", margin: "0 auto" },
+    title: { marginBottom: "20px", color: "#333", textAlign: "center" },
+
+    layout: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px" },
+
+    panel: {
       border: "1px solid #e0e0e0",
       borderRadius: "12px",
       backgroundColor: "#fff",
       boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-      padding: "18px",
-      marginBottom: "16px",
+      padding: "16px",
     },
-    row: { display: "flex", gap: "14px", alignItems: "center" },
-    imgWrap: {
-      width: "110px",
-      height: "110px",
-      borderRadius: "10px",
-      background: "#fff",
-      border: "1px solid #eee",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      overflow: "hidden",
-      padding: "8px",
-      flexShrink: 0,
-    },
-    img: { width: "100%", height: "100%", objectFit: "contain" },
-    name: { fontSize: "1.05rem", fontWeight: "bold", color: "#333", marginBottom: "4px" },
-    meta: { color: "#666", fontSize: "0.95rem" },
-    total: { fontSize: "1.15rem", fontWeight: "bold", color: "#28a745" },
 
-    stepper: { display: "flex", gap: "10px", marginBottom: "18px" },
-    stepPill: (active) => ({
-      padding: "8px 12px",
-      borderRadius: "999px",
-      border: "1px solid #ddd",
-      background: active ? "#333" : "#f7f7f7",
-      color: active ? "#fff" : "#333",
-      fontWeight: "bold",
-      fontSize: "0.9rem",
-    }),
+    sectionTitle: { marginTop: 0, marginBottom: "12px", color: "#333" },
 
-    formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
+    row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
+    inputGroup: { marginBottom: "12px" },
+    label: { display: "block", marginBottom: "6px", color: "#555", fontWeight: "bold" },
     input: {
       width: "100%",
       padding: "12px",
       borderRadius: "10px",
       border: "1px solid #ddd",
       outline: "none",
-    },
-    textarea: {
-      width: "100%",
-      padding: "12px",
-      borderRadius: "10px",
-      border: "1px solid #ddd",
-      outline: "none",
-      minHeight: "90px",
-      resize: "vertical",
+      fontSize: "15px",
     },
 
-    btnRow: { display: "flex", gap: "10px", flexWrap: "wrap" },
+    // resumen
+    item: { display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px" },
+    imgWrap: {
+      width: "58px",
+      height: "58px",
+      borderRadius: "10px",
+      border: "1px solid #eee",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      padding: "6px",
+      flexShrink: 0,
+    },
+    img: { width: "100%", height: "100%", objectFit: "contain" },
+    itemName: { fontWeight: "bold", color: "#333", fontSize: "0.95rem" },
+    itemMeta: { color: "#666", fontSize: "0.85rem" },
+    itemPrice: { marginLeft: "auto", fontWeight: "bold", color: "#28a745" },
+
+    summaryRow: { display: "flex", justifyContent: "space-between", marginBottom: "10px", color: "#444" },
+    total: { fontSize: "1.15rem", fontWeight: "bold", color: "#28a745" },
+
+    btnRow: { display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" },
     btn: {
-      padding: "12px 16px",
+      padding: "12px 14px",
       borderRadius: "10px",
       border: "none",
       cursor: "pointer",
       fontWeight: "bold",
+      fontSize: "0.95rem",
     },
-    btnPrimary: { backgroundColor: "#007bff", color: "white" },
-    btnDark: { backgroundColor: "#333", color: "white" },
-    btnLight: { backgroundColor: "#f1f1f1", color: "#333" },
-    btnDanger: { backgroundColor: "#dc3545", color: "white" },
+    btnPrimary: { background: "#007bff", color: "white" },
+    btnDark: { background: "#333", color: "white" },
+    btnLight: { background: "#f3f3f3", color: "#333", border: "1px solid #ddd" },
 
-    radioRow: {
+    // tarjetas
+    cardList: { display: "grid", gap: "10px" },
+    cardBox: (active) => ({
+      border: active ? "2px solid #007bff" : "1px solid #e0e0e0",
+      borderRadius: "12px",
+      padding: "12px",
+      cursor: "pointer",
+      background: active ? "rgba(0,123,255,0.06)" : "white",
       display: "flex",
+      justifyContent: "space-between",
       alignItems: "center",
       gap: "10px",
-      padding: "12px",
-      border: "1px solid #eee",
-      borderRadius: "10px",
-      marginBottom: "10px",
+    }),
+    badge: {
+      padding: "4px 10px",
+      borderRadius: "999px",
+      background: "#007bff",
+      color: "white",
+      fontSize: "0.75rem",
+      fontWeight: "bold",
+      whiteSpace: "nowrap",
+      height: "fit-content",
     },
-    small: { fontSize: "0.85rem", color: "#777" },
+
+    // direcciones
+    addrList: { display: "grid", gap: "10px", marginBottom: "12px" },
+    addrBox: (active) => ({
+      border: active ? "2px solid #007bff" : "1px solid #e0e0e0",
+      borderRadius: "12px",
+      padding: "12px",
+      cursor: "pointer",
+      background: active ? "rgba(0,123,255,0.06)" : "white",
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "10px",
+    }),
+    miniActions: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" },
+    tinyBtn: {
+      padding: "8px 10px",
+      borderRadius: "10px",
+      border: "1px solid #ddd",
+      background: "#f3f3f3",
+      cursor: "pointer",
+      fontWeight: "bold",
+      fontSize: "0.85rem",
+    },
+    tinyDanger: {
+      padding: "8px 10px",
+      borderRadius: "10px",
+      border: "1px solid #f0b8bf",
+      background: "#fff2f4",
+      cursor: "pointer",
+      fontWeight: "bold",
+      fontSize: "0.85rem",
+      color: "#c82333",
+    },
   };
 
-  const handleAddressChange = (e) => {
-    setAddress({ ...address, [e.target.name]: e.target.value });
+  const getUser = () => JSON.parse(localStorage.getItem("user") || "null");
+  const getUserId = () => {
+    const u = getUser();
+    return u?.id ? String(u.id) : null;
   };
 
-  const validateAddress = () => {
-    const required = ["fullName", "phone", "street", "city", "state", "zip"];
-    for (const k of required) {
-      if (!String(address[k] || "").trim()) return false;
+  const addrKey = () => {
+    const uid = getUserId();
+    return uid ? `address_book_${uid}` : "address_book_guest";
+  };
+
+  const defaultAddrKey = () => {
+    const uid = getUserId();
+    return uid ? `default_address_${uid}` : "default_address_guest";
+  };
+
+  const saveAddressBook = (nextBook) => {
+    setAddresses(nextBook);
+    localStorage.setItem(addrKey(), JSON.stringify(nextBook));
+  };
+
+  const loadAddressBook = () => {
+    const book = JSON.parse(localStorage.getItem(addrKey()) || "[]");
+    const defId = localStorage.getItem(defaultAddrKey());
+
+    const safeBook = Array.isArray(book) ? book : [];
+    const def = defId ? String(defId) : null;
+
+    setAddresses(safeBook);
+    setDefaultAddressId(def);
+
+    if (def && safeBook.some((a) => String(a.id) === def)) {
+      setSelectedAddressId(def);
+      setShowAddressForm(false);
+      setEditingAddressId(null);
+    } else if (safeBook.length > 0) {
+      setSelectedAddressId(String(safeBook[0].id));
+      setShowAddressForm(false);
+      setEditingAddressId(null);
+    } else {
+      setSelectedAddressId(null);
+      setShowAddressForm(true);
+      setEditingAddressId(null);
     }
-    return true;
   };
 
-  const goToPayment = async () => {
-    if (!validateAddress()) {
-      alert("Por favor completa la dirección (nombre, teléfono, calle, ciudad, estado y CP).");
+  const getSelectedAddress = () => {
+    const found = addresses.find((a) => String(a.id) === String(selectedAddressId));
+    return found || null;
+  };
+
+  const formatShippingAddress = (addr) => {
+    if (!addr) return "";
+    return (
+      `${addr.fullName} | ${addr.phone}\n` +
+      `${addr.street}, ${addr.city}, ${addr.state} ${addr.zip}\n` +
+      `${addr.notes || ""}`
+    );
+  };
+
+  useEffect(() => {
+    const stateItems = location.state?.items;
+    if (Array.isArray(stateItems) && stateItems.length > 0) {
+      setCart(stateItems);
+    } else {
+      const savedCart =
+        JSON.parse(localStorage.getItem("checkout_cart")) ||
+        JSON.parse(localStorage.getItem("cart")) ||
+        [];
+      setCart(Array.isArray(savedCart) ? savedCart : []);
+    }
+
+    loadAddressBook();
+
+    const last = JSON.parse(localStorage.getItem("checkout_address") || "null");
+    if (last && typeof last === "object") {
+      setAddress((prev) => ({ ...prev, ...last }));
+    }
+
+  }, [location.state]);
+
+  // ===== Cargar tarjetas =====
+  useEffect(() => {
+    const fetchCards = async () => {
+      setLoadingCards(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setCards([]);
+        setLoadingCards(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(import.meta.env.VITE_API_URL + "/api/payments", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const safe = Array.isArray(data) ? data : [];
+          setCards(safe);
+          if (safe.length > 0) setSelectedCardId(safe[0].id);
+        } else {
+          setCards([]);
+        }
+      } catch {
+        setCards([]);
+      } finally {
+        setLoadingCards(false);
+      }
+    };
+
+    fetchCards();
+  }, []);
+
+  // ===== Cálculos / Validaciones =====
+  const subtotal = useMemo(() => {
+    return cart.reduce((acc, p) => {
+      const price = Number(p.price) || 0;
+      const qty = Number(p.quantity) || 1;
+      return acc + price * qty;
+    }, 0);
+  }, [cart]);
+
+  const formAddressIsValid = useMemo(() => {
+    return (
+      address.fullName.trim() &&
+      address.phone.trim() &&
+      address.street.trim() &&
+      address.city.trim() &&
+      address.state.trim() &&
+      address.zip.trim()
+    );
+  }, [address]);
+
+  const paymentIsValid = useMemo(() => !!selectedCardId, [selectedCardId]);
+
+  // ===== Acciones de direcciones =====
+  const startAddAddress = () => {
+    setEditingAddressId(null);
+    setSaveAsDefault(true);
+    setAddress({
+      fullName: "",
+      phone: "",
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
+      notes: "",
+    });
+    setShowAddressForm(true);
+  };
+
+  const startEditAddress = (id) => {
+    const found = addresses.find((a) => String(a.id) === String(id));
+    if (!found) return;
+    setEditingAddressId(String(found.id));
+    setSaveAsDefault(defaultAddressId === String(found.id));
+    setAddress({
+      fullName: found.fullName || "",
+      phone: found.phone || "",
+      street: found.street || "",
+      city: found.city || "",
+      state: found.state || "",
+      zip: found.zip || "",
+      notes: found.notes || "",
+    });
+    setShowAddressForm(true);
+  };
+
+  const cancelAddressForm = () => {
+    setShowAddressForm(false);
+    setEditingAddressId(null);
+  };
+
+  const setAsDefault = (id) => {
+    const uid = getUserId();
+    if (!uid) {
+      alert("Debes iniciar sesión para guardar una dirección predeterminada.");
+      return;
+    }
+    localStorage.setItem(defaultAddrKey(), String(id));
+    setDefaultAddressId(String(id));
+  };
+
+  const deleteAddress = (id) => {
+    const uid = getUserId();
+    if (!uid) {
+      alert("Debes iniciar sesión para administrar direcciones.");
       return;
     }
 
-  
-    localStorage.setItem("checkout_address", JSON.stringify(address));
+    const found = addresses.find((a) => String(a.id) === String(id));
+    if (!found) return;
 
+    const ok = window.confirm(
+      `¿Seguro que quieres eliminar esta dirección?\n\n${found.street}, ${found.city}`
+    );
+    if (!ok) return;
+
+    const next = addresses.filter((a) => String(a.id) !== String(id));
+    saveAddressBook(next);
+
+    // Si era la predeterminada, reasigna
+    if (defaultAddressId && String(defaultAddressId) === String(id)) {
+      if (next.length > 0) {
+        localStorage.setItem(defaultAddrKey(), String(next[0].id));
+        setDefaultAddressId(String(next[0].id));
+      } else {
+        localStorage.removeItem(defaultAddrKey());
+        setDefaultAddressId(null);
+      }
+    }
+
+    // Si era la seleccionada, selecciona otra o abre form
+    if (selectedAddressId && String(selectedAddressId) === String(id)) {
+      if (next.length > 0) {
+        setSelectedAddressId(String(next[0].id));
+      } else {
+        setSelectedAddressId(null);
+        startAddAddress();
+      }
+    }
+
+    // Si estaba editando esa, cierra form
+    if (editingAddressId && String(editingAddressId) === String(id)) {
+      cancelAddressForm();
+    }
+  };
+
+  const saveAddressFromForm = () => {
+    const uid = getUserId();
+    if (!uid) {
+      alert("Debes iniciar sesión para guardar direcciones.");
+      return null;
+    }
+
+    if (!formAddressIsValid) {
+      alert("Completa los campos obligatorios de dirección.");
+      return null;
+    }
+
+    // Editar
+    if (editingAddressId) {
+      const next = addresses.map((a) =>
+        String(a.id) === String(editingAddressId)
+          ? { ...a, ...address, id: a.id }
+          : a
+      );
+      saveAddressBook(next);
+
+      if (saveAsDefault) setAsDefault(editingAddressId);
+
+
+      setSelectedAddressId(String(editingAddressId));
+      setShowAddressForm(false);
+      setEditingAddressId(null);
+
+      return next.find((a) => String(a.id) === String(editingAddressId)) || null;
+    }
+
+    // Crear nueva
+    const newAddr = { id: Date.now(), ...address };
+    const next = [...addresses, newAddr];
+    saveAddressBook(next);
+
+    if (saveAsDefault) setAsDefault(newAddr.id);
+
+    setSelectedAddressId(String(newAddr.id));
+    setShowAddressForm(false);
+    setEditingAddressId(null);
+
+    return newAddr;
+  };
+
+  const continueFromAddressStep = () => {
+    // Si está usando lista
+    if (!showAddressForm) {
+      const sel = getSelectedAddress();
+      if (!sel) {
+        alert("Selecciona una dirección o agrega una nueva.");
+        return;
+      }
+      localStorage.setItem("checkout_address", JSON.stringify(sel));
+      setStep(2);
+      return;
+    }
+
+    const saved = saveAddressFromForm();
+    if (!saved) return;
+
+    localStorage.setItem("checkout_address", JSON.stringify(saved));
     setStep(2);
-    await fetchCards();
   };
 
-  const fetchCards = async () => {
+  const finalizePurchase = async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      setCards([]);
-      return;
-    }
+    const user = getUser();
+    if (!token || !user) return alert("Debes iniciar sesión para comprar.");
 
-    setLoadingCards(true);
+    if (!cart || cart.length === 0) return alert("No hay productos para comprar.");
+    if (!paymentIsValid) return alert("Selecciona una tarjeta para pagar.");
+
+    const addrToUse = showAddressForm
+      ? address
+      : (getSelectedAddress() || null);
+
+    if (!addrToUse) return alert("Selecciona o agrega una dirección.");
+    if (showAddressForm && !formAddressIsValid) return alert("Completa la dirección antes de finalizar.");
+
+    const items = cart.map((p) => ({
+      id: p.id,
+      quantity: Number(p.quantity) || 1,
+      price: Number(p.price) || 0,
+    }));
+
+    const shipping_address = formatShippingAddress(addrToUse);
+
     try {
-      const res = await fetch(import.meta.env.VITE_API_URL + "/api/payments", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(import.meta.env.VITE_API_URL + "/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          total_amount: subtotal,
+          shipping_address,
+          userId: user.id,
+          items,
+          status: "pending",
+        }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setCards(Array.isArray(data) ? data : []);
-        if (Array.isArray(data) && data.length > 0) {
-          setSelectedCardId(String(data[0].id));
-        }
-      } else {
-        setCards([]);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Error al crear la orden.");
+        return;
       }
-    } catch (e) {
-      setCards([]);
-    } finally {
-      setLoadingCards(false);
+
+      localStorage.removeItem("checkout_cart");
+      localStorage.removeItem("checkout_address");
+
+      const fullCart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const purchasedIds = new Set(items.map((i) => i.id));
+      const remaining = Array.isArray(fullCart)
+        ? fullCart.filter((p) => !purchasedIds.has(p.id))
+        : [];
+      localStorage.setItem("cart", JSON.stringify(remaining));
+
+      alert("✅ Orden creada exitosamente");
+      navigate("/orders");
+    } catch {
+      alert("Error de conexión");
     }
   };
 
-const finalizePurchase = async () => {
-  // Validaciones básicas
-  if (!validateAddress()) {
-    alert("Dirección incompleta.");
-    setStep(1);
-    return;
-  }
-
-  if (!selectedCardId) {
-    alert("Selecciona una tarjeta para pagar o agrega una en la billetera.");
-    return;
-  }
-
-  const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-
-  if (!token || !user) {
-    alert("Tu sesión expiró. Inicia sesión de nuevo.");
-    return navigate("/login");
-  }
-
-  if (!cart || cart.length === 0) {
-    alert("Carrito vacío.");
-    return navigate("/");
-  }
-
- 
-  const items = cart.map((p) => ({
-    id: p.id,
-    quantity: Number(p.quantity) || 1,
-    price: Number(p.price) || 0,
-  }));
-
-  const total_amount = items.reduce(
-    (acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || 1),
-    0
-  );
-
-  const shipping_address =
-    `${address.fullName}, ${address.phone}, ${address.street}, ` +
-    `${address.city}, ${address.state}, CP ${address.zip}` +
-    (address.notes ? `, Notas: ${address.notes}` : "");
-
-  try {
-    const res = await fetch(import.meta.env.VITE_API_URL + "/api/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        total_amount,
-        shipping_address,
-        userId: user.id,
-        items,
-        status: "pending",
-        
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      return alert("Error al crear la orden: " + (data.message || "desconocido"));
-    }
-
-    
-    localStorage.removeItem("cart");
-    localStorage.removeItem("checkout_address");
-    alert("✅ Orden creada exitosamente");
-    navigate("/orders");
-  } catch (error) {
-    alert("Error de conexión al crear la orden");
-  }
-};
 
   if (!cart || cart.length === 0) {
     return (
       <div style={styles.container}>
         <h1 style={styles.title}>Checkout</h1>
-        <div style={styles.card}>
+        <div style={styles.panel}>
           <p>No hay productos para comprar.</p>
-          <button style={{ ...styles.btn, ...styles.btnDark }} onClick={() => navigate("/")}>
-            Volver a la tienda
-          </button>
+          <div style={styles.btnRow}>
+            <button style={{ ...styles.btn, ...styles.btnDark }} onClick={() => navigate("/")}>
+              Ir a inicio
+            </button>
+            <button style={{ ...styles.btn, ...styles.btnLight }} onClick={() => navigate("/cart")}>
+              Volver al carrito
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -277,190 +533,352 @@ const finalizePurchase = async () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>🧾 Checkout</h1>
-      <div style={styles.subtitle}>
-        Artículos: <b>{totalItems}</b> · Total: <b style={{ color: "#28a745" }}>${subtotal.toFixed(2)}</b>
-      </div>
+      <h1 style={styles.title}>✅ Checkout</h1>
 
-      <div style={styles.stepper}>
-        <div style={styles.stepPill(step === 1)}>1) Dirección</div>
-        <div style={styles.stepPill(step === 2)}>2) Pago</div>
-      </div>
+      <div style={styles.layout}>
+        {/* IZQUIERDA */}
+        <div style={styles.panel}>
 
-      {/* Resumen de productos */}
-      <div style={styles.card}>
-        {cart.map((item) => (
-          <div key={item.id} style={{ ...styles.row, marginBottom: "12px" }}>
-            <div style={styles.imgWrap}>
-              <img src={item.image} alt={item.name} style={styles.img} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={styles.name}>{item.name}</div>
-              <div style={styles.meta}>
-                Cantidad: {item.quantity} · Precio: ${item.price}
-              </div>
-              <div style={styles.meta}>
-                Total producto:{" "}
-                <b>${((Number(item.price) || 0) * (Number(item.quantity) || 1)).toFixed(2)}</b>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          {step === 1 && (
+            <>
+              <h2 style={styles.sectionTitle}>1) Dirección de envío</h2>
 
-      {/* STEP 1: Dirección */}
-      {step === 1 && (
-        <div style={styles.card}>
-          <h2 style={{ marginTop: 0 }}>📦 Dirección de envío</h2>
+              {/* LISTA de direcciones guardadas */}
+              {addresses.length > 0 && !showAddressForm && (
+                <>
+                  <div style={styles.addrList}>
+                    {addresses.map((a) => {
+                      const active = String(selectedAddressId) === String(a.id);
+                      const isDefault = defaultAddressId && String(defaultAddressId) === String(a.id);
 
-          <div style={styles.formGrid}>
-            <div>
-              <div style={styles.small}>Nombre completo</div>
-              <input
-                name="fullName"
-                value={address.fullName}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. Hector Mendoza"
-              />
-            </div>
-            <div>
-              <div style={styles.small}>Teléfono</div>
-              <input
-                name="phone"
-                value={address.phone}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. 55 1234 5678"
-              />
-            </div>
+                      return (
+                        <div
+                          key={a.id}
+                          style={styles.addrBox(active)}
+                          onClick={() => setSelectedAddressId(String(a.id))}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: "bold", color: "#333" }}>{a.fullName}</div>
+                            <div style={{ color: "#666", marginTop: "4px" }}>
+                              {a.street}, {a.city}, {a.state} {a.zip}
+                            </div>
+                            <div style={{ color: "#666", marginTop: "4px" }}>Tel: {a.phone}</div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={styles.small}>Calle y número</div>
-              <input
-                name="street"
-                value={address.street}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. Av. Siempre Viva 123"
-              />
-            </div>
+                            <div style={styles.miniActions}>
+                              {!isDefault ? (
+                                <button
+                                  type="button"
+                                  style={styles.tinyBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAsDefault(a.id);
+                                  }}
+                                >
+                                  Hacer predeterminada
+                                </button>
+                              ) : (
+                                <span style={styles.badge}>Predeterminada</span>
+                              )}
 
-            <div>
-              <div style={styles.small}>Ciudad</div>
-              <input
-                name="city"
-                value={address.city}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. Guadalajara"
-              />
-            </div>
-            <div>
-              <div style={styles.small}>Estado</div>
-              <input
-                name="state"
-                value={address.state}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. Jalisco"
-              />
-            </div>
+                              <button
+                                type="button"
+                                style={styles.tinyBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startEditAddress(a.id);
+                                }}
+                              >
+                                Editar
+                              </button>
 
-            <div>
-              <div style={styles.small}>Código Postal</div>
-              <input
-                name="zip"
-                value={address.zip}
-                onChange={handleAddressChange}
-                style={styles.input}
-                placeholder="Ej. 44100"
-              />
-            </div>
+                              <button
+                                type="button"
+                                style={styles.tinyDanger}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteAddress(a.id);
+                                }}
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={styles.small}>Notas (opcional)</div>
-              <textarea
-                name="notes"
-                value={address.notes}
-                onChange={handleAddressChange}
-                style={styles.textarea}
-                placeholder="Ej. Entregar con el guardia, depto 302..."
-              />
-            </div>
-          </div>
+                          {active && <div style={styles.badge}>Seleccionada</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-          <div style={{ ...styles.btnRow, marginTop: "14px" }}>
-            <button style={{ ...styles.btn, ...styles.btnLight }} onClick={() => navigate("/")}>
-              Seguir comprando
-            </button>
-            <button style={{ ...styles.btn, ...styles.btnPrimary }} onClick={goToPayment}>
-              Continuar a pago
-            </button>
-          </div>
-        </div>
-      )}
+                  <div style={styles.btnRow}>
+                    <button
+                      style={{ ...styles.btn, ...styles.btnLight }}
+                      onClick={startAddAddress}
+                    >
+                      Agregar nueva dirección
+                    </button>
 
-      {/* STEP 2: Pago */}
-      {step === 2 && (
-        <div style={styles.card}>
-          <h2 style={{ marginTop: 0 }}>💳 Pago</h2>
+                    <button
+                      style={{ ...styles.btn, ...styles.btnPrimary }}
+                      onClick={continueFromAddressStep}
+                    >
+                      Continuar a pago
+                    </button>
+                  </div>
+                </>
+              )}
 
-          <div style={{ marginBottom: "10px", color: "#555" }}>
-            Selecciona una tarjeta guardada o agrega una nueva en tu billetera.
-          </div>
+              {/* FORMULARIO nueva/editar */}
+              {(addresses.length === 0 || showAddressForm) && (
+                <>
+                  <div style={{ marginBottom: "8px", color: "#555", fontWeight: "bold" }}>
+                    {editingAddressId ? "Editar dirección" : "Nueva dirección"}
+                  </div>
 
-          {loadingCards ? (
-            <div>Cargando tarjetas...</div>
-          ) : cards.length === 0 ? (
-            <div style={{ marginBottom: "12px" }}>
-              <b>No tienes tarjetas guardadas.</b>
-              <div style={styles.small}>Usa “Ir a billetera” para agregar una.</div>
-            </div>
-          ) : (
-            <div style={{ marginBottom: "12px" }}>
-              {cards.map((c) => (
-                <label key={c.id} style={styles.radioRow}>
-                  <input
-                    type="radio"
-                    name="card"
-                    checked={String(selectedCardId) === String(c.id)}
-                    onChange={() => setSelectedCardId(String(c.id))}
-                  />
-                  <div>
-                    <div style={{ fontWeight: "bold" }}>
-                      **** **** **** {String(c.card_number || "").slice(-4)}
+                  <div style={styles.row}>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Nombre completo *</label>
+                      <input
+                        style={styles.input}
+                        value={address.fullName}
+                        onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
+                      />
                     </div>
-                    <div style={styles.small}>
-                      Titular: {c.card_holder} · Vence: {c.expiration_date}
+
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Teléfono *</label>
+                      <input
+                        style={styles.input}
+                        value={address.phone}
+                        onChange={(e) => setAddress({ ...address, phone: e.target.value })}
+                      />
                     </div>
                   </div>
-                </label>
-              ))}
-            </div>
+
+                  <div style={styles.inputGroup}>
+                    <label style={styles.label}>Calle y número *</label>
+                    <input
+                      style={styles.input}
+                      value={address.street}
+                      onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                    />
+                  </div>
+
+                  <div style={styles.row}>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Ciudad *</label>
+                      <input
+                        style={styles.input}
+                        value={address.city}
+                        onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                      />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Estado *</label>
+                      <input
+                        style={styles.input}
+                        value={address.state}
+                        onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={styles.row}>
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Código postal *</label>
+                      <input
+                        style={styles.input}
+                        value={address.zip}
+                        onChange={(e) => setAddress({ ...address, zip: e.target.value })}
+                      />
+                    </div>
+
+                    <div style={styles.inputGroup}>
+                      <label style={styles.label}>Notas (opcional)</label>
+                      <input
+                        style={styles.input}
+                        value={address.notes}
+                        onChange={(e) => setAddress({ ...address, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={saveAsDefault}
+                      onChange={(e) => setSaveAsDefault(e.target.checked)}
+                    />
+                    <span style={{ color: "#555" }}>
+                      Guardar como predeterminada
+                    </span>
+                  </div>
+
+                  <div style={styles.btnRow}>
+                    {addresses.length > 0 && (
+                      <button
+                        style={{ ...styles.btn, ...styles.btnLight }}
+                        onClick={cancelAddressForm}
+                      >
+                        Usar una guardada
+                      </button>
+                    )}
+
+                    <button
+                      style={{ ...styles.btn, ...styles.btnPrimary, opacity: formAddressIsValid ? 1 : 0.7 }}
+                      onClick={continueFromAddressStep}
+                    >
+                      {editingAddressId ? "Guardar cambios y continuar" : "Guardar y continuar"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
           )}
 
-          <div style={styles.btnRow}>
-            <button style={{ ...styles.btn, ...styles.btnLight }} onClick={() => setStep(1)}>
-              Volver a dirección
-            </button>
+          {step === 2 && (
+            <>
+              <h2 style={styles.sectionTitle}>2) Pago</h2>
 
-            <button style={{ ...styles.btn, ...styles.btnDark }} onClick={() => navigate("/wallet")}>
-              Ir a billetera
-            </button>
+              {loadingCards ? (
+                <p>Cargando tarjetas...</p>
+              ) : cards.length === 0 ? (
+                <>
+                  <p style={{ color: "#555" }}>
+                    No tienes tarjetas guardadas. Agrega una en tu billetera.
+                  </p>
 
-            <button
-              style={{ ...styles.btn, ...styles.btnPrimary }}
-              onClick={finalizePurchase}
-            >
-              Finalizar compra
-            </button>
-          </div>
+                  <div style={styles.btnRow}>
+                    <button
+                      style={{ ...styles.btn, ...styles.btnDark }}
+                      onClick={() => navigate("/wallet")}
+                    >
+                      Ir a billetera
+                    </button>
+
+                    <button
+                      style={{ ...styles.btn, ...styles.btnLight }}
+                      onClick={() => setStep(1)}
+                    >
+                      Volver a dirección
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={styles.cardList}>
+                    {cards.map((c) => (
+                      <div
+                        key={c.id}
+                        style={styles.cardBox(selectedCardId === c.id)}
+                        onClick={() => setSelectedCardId(c.id)}
+                      >
+                        <div>
+                          <div style={{ fontWeight: "bold", color: "#333" }}>{c.card_holder}</div>
+                          <div style={{ color: "#666", marginTop: "4px" }}>
+                            **** **** **** {String(c.card_number).slice(-4)} · Vence {c.expiration_date}
+                          </div>
+                        </div>
+                        {selectedCardId === c.id && <div style={styles.badge}>Seleccionada</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={styles.btnRow}>
+                    <button
+                      style={{ ...styles.btn, ...styles.btnLight }}
+                      onClick={() => setStep(1)}
+                    >
+                      Volver a dirección
+                    </button>
+
+<button
+  style={{ ...styles.btn, ...styles.btnDark }}
+  onClick={() => navigate("/wallet?from=checkout")}
+>
+  Agregar / Administrar tarjetas
+</button>
+
+
+                    <button
+                      style={{
+                        ...styles.btn,
+                        ...styles.btnPrimary,
+                        opacity: paymentIsValid ? 1 : 0.7,
+                      }}
+                      onClick={finalizePurchase}
+                    >
+                      Finalizar compra
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
-      )}
+
+        {/* DERECHA: RESUMEN */}
+        <div style={styles.panel}>
+          <h3 style={styles.sectionTitle}>Resumen</h3>
+
+          <div style={{ marginBottom: "12px" }}>
+            {cart.map((p) => (
+              <div key={p.id} style={styles.item}>
+                <div style={styles.imgWrap}>
+                  <img
+                    src={p.image || "https://via.placeholder.com/150?text=Sin+Foto"}
+                    alt={p.name}
+                    style={styles.img}
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={styles.itemName}>{p.name}</div>
+                  <div style={styles.itemMeta}>
+                    ${p.price} · Cantidad: {p.quantity || 1}
+                  </div>
+                </div>
+
+                <div style={styles.itemPrice}>
+                  ${((Number(p.price) || 0) * (Number(p.quantity) || 1)).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.summaryRow}>
+            <span>Subtotal</span>
+            <b>${subtotal.toFixed(2)}</b>
+          </div>
+
+          <div style={styles.summaryRow}>
+            <span>Total</span>
+            <span style={styles.total}>${subtotal.toFixed(2)}</span>
+          </div>
+
+         <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
+  <button
+    style={{ ...styles.btn, ...styles.btnLight }}
+    onClick={() => navigate("/cart")}
+  >
+    Volver al carrito
+  </button>
+
+  <button
+    style={{ ...styles.btn, ...styles.btnLight }}
+    onClick={() => navigate("/")}
+  >
+    Volver a inicio
+  </button>
+</div>
+
+        </div>
+      </div>
     </div>
   );
 };
 
 export default Checkout;
+
 

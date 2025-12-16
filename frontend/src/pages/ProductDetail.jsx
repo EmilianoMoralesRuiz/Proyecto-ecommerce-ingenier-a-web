@@ -35,6 +35,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     fetchProductAndReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchProductAndReviews = async () => {
@@ -43,8 +44,11 @@ const ProductDetail = () => {
       const resProd = await fetch(`https://mobistore-backend.onrender.com/api/products/${id}`);
       const dataProd = await resProd.json();
       setProduct(dataProd);
+
       if (dataProd.ProductImages && dataProd.ProductImages.length > 0) {
         setSelectedImage(dataProd.ProductImages[0].imageUrl);
+      } else {
+        setSelectedImage('');
       }
 
       // 2. Cargar Reseñas
@@ -52,6 +56,8 @@ const ProductDetail = () => {
       if (resRev.ok) {
         const dataRev = await resRev.json();
         setReviews(dataRev);
+      } else {
+        setReviews([]);
       }
 
     } catch (error) {
@@ -61,20 +67,31 @@ const ProductDetail = () => {
     }
   };
 
+  // ✅ MODIFICADO: agrega confirm para "Ir a carrito / Seguir comprando"
   const handleAddToCart = () => {
     const user = localStorage.getItem('user');
     if (!user) return navigate('/login');
 
+    if (!product) return;
+
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
     const existingIndex = cart.findIndex(item => item.id === product.id);
-    
+
+    const imgToSave = selectedImage || 'https://via.placeholder.com/150?text=Sin+Foto';
+
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += 1;
     } else {
-      cart.push({ ...product, quantity: 1, image: selectedImage });
+      cart.push({ ...product, quantity: 1, image: imgToSave });
     }
+
     localStorage.setItem('cart', JSON.stringify(cart));
-    alert('Añadido al carrito');
+
+    const goCart = window.confirm(
+      `✅ ${product.name} agregado al carrito.\n\n¿Ir al carrito?\n(Cancelar = Seguir comprando)`
+    );
+
+    if (goCart) navigate('/cart');
   };
 
   const submitReview = async (e) => {
@@ -121,13 +138,18 @@ const ProductDetail = () => {
     <div style={styles.container}>
       {/* GALERÍA */}
       <div style={styles.gallery}>
-        <img src={selectedImage || 'https://via.placeholder.com/400'} alt={product.name} style={styles.mainImage} />
+        <img
+          src={selectedImage || 'https://via.placeholder.com/400'}
+          alt={product.name}
+          style={styles.mainImage}
+        />
         <div style={styles.thumbnails}>
           {product.ProductImages && product.ProductImages.map((img, index) => (
             <img 
-              key={index} 
-              src={img.imageUrl} 
-              style={{...styles.thumb, borderColor: selectedImage === img.imageUrl ? '#007bff' : '#ddd'}}
+              key={index}
+              src={img.imageUrl}
+              alt={`thumb-${index}`}
+              style={{ ...styles.thumb, borderColor: selectedImage === img.imageUrl ? '#007bff' : '#ddd' }}
               onClick={() => setSelectedImage(img.imageUrl)}
             />
           ))}
@@ -140,8 +162,11 @@ const ProductDetail = () => {
         <div style={styles.price}>${product.price}</div>
         
         {/* Promedio visual */}
-        <div style={{marginBottom: '15px', color: '#ffc107', fontWeight: 'bold', fontSize: '1.2rem'}}>
-          ★ {averageRating} <span style={{color: '#777', fontSize: '0.9rem', fontWeight: 'normal'}}>({reviews.length} opiniones)</span>
+        <div style={{ marginBottom: '15px', color: '#ffc107', fontWeight: 'bold', fontSize: '1.2rem' }}>
+          ★ {averageRating}{' '}
+          <span style={{ color: '#777', fontSize: '0.9rem', fontWeight: 'normal' }}>
+            ({reviews.length} opiniones)
+          </span>
         </div>
 
         <div style={styles.meta}>Categoría: {product.category}</div>
@@ -151,7 +176,7 @@ const ProductDetail = () => {
         <p style={styles.desc}>{product.description}</p>
 
         <button style={styles.btn} onClick={handleAddToCart} disabled={product.stock <= 0}>
-            {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
+          {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
         </button>
       </div>
 
@@ -160,39 +185,43 @@ const ProductDetail = () => {
         <h2>⭐ Opiniones de Clientes</h2>
         
         {/* Formulario */}
-        <form onSubmit={submitReview} style={{marginTop: '20px', maxWidth: '500px', marginBottom: '40px'}}>
-            <h4 style={{marginBottom: '10px'}}>Deja tu valoración:</h4>
-            <div style={{marginBottom: '10px'}}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <span key={star} style={styles.star} onClick={() => setRating(star)}>
-                        {star <= rating ? '★' : '☆'}
-                    </span>
-                ))}
-            </div>
-            <textarea 
-                placeholder="¿Qué te pareció el producto?" 
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                style={{width: '100%', padding: '10px', height: '80px', marginBottom: '10px'}}
-            />
-            <button type="submit" style={{...styles.btn, padding: '10px 20px', fontSize: '0.9rem'}}>Publicar Opinión</button>
+        <form onSubmit={submitReview} style={{ marginTop: '20px', maxWidth: '500px', marginBottom: '40px' }}>
+          <h4 style={{ marginBottom: '10px' }}>Deja tu valoración:</h4>
+          <div style={{ marginBottom: '10px' }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <span key={star} style={styles.star} onClick={() => setRating(star)}>
+                {star <= rating ? '★' : '☆'}
+              </span>
+            ))}
+          </div>
+          <textarea 
+            placeholder="¿Qué te pareció el producto?" 
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            style={{ width: '100%', padding: '10px', height: '80px', marginBottom: '10px' }}
+          />
+          <button type="submit" style={{ ...styles.btn, padding: '10px 20px', fontSize: '0.9rem' }}>
+            Publicar Opinión
+          </button>
         </form>
 
         {/* Lista de comentarios */}
         <div>
           {reviews.length === 0 ? (
-            <p style={{color: '#777'}}>Este producto aún no tiene reseñas. ¡Sé el primero!</p>
+            <p style={{ color: '#777' }}>
+              Este producto aún no tiene reseñas. ¡Sé el primero!
+            </p>
           ) : (
             reviews.map(rev => (
               <div key={rev.id} style={styles.reviewCard}>
                 <div style={styles.reviewUser}>
-                   👤 {rev.User ? rev.User.name : 'Usuario'} 
-                   <span style={{color: '#ffc107', marginLeft: '10px'}}>
-                     {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
-                   </span>
+                  👤 {rev.User ? rev.User.name : 'Usuario'}
+                  <span style={{ color: '#ffc107', marginLeft: '10px' }}>
+                    {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                  </span>
                 </div>
-                <div style={{color: '#555'}}>{rev.comment}</div>
-                <div style={{fontSize: '0.75rem', color: '#aaa', marginTop: '5px'}}>
+                <div style={{ color: '#555' }}>{rev.comment}</div>
+                <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '5px' }}>
                   {new Date(rev.createdAt).toLocaleDateString()}
                 </div>
               </div>

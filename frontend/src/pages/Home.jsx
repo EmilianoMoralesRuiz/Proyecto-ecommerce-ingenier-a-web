@@ -226,39 +226,52 @@ const Home = () => {
     );
   };
 
-  const addToCart = (product) => {
-    const user = localStorage.getItem('user');
-    if (!user) return navigate('/login');
+ const addToCart = (product) => {
+  const user = localStorage.getItem('user');
+  if (!user) return navigate('/login');
 
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const idx = cart.findIndex((item) => item.id === product.id);
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const idx = cart.findIndex((item) => item.id === product.id);
 
-    if (idx >= 0) cart[idx].quantity += 1;
-    else cart.push({ ...product, quantity: 1 });
+  const mainImage =
+    product.ProductImages && product.ProductImages.length > 0
+      ? product.ProductImages[0].imageUrl
+      : 'https://via.placeholder.com/150?text=Sin+Foto';
 
-    localStorage.setItem('cart', JSON.stringify(cart));
-    alert(`¡${product.name} agregado al carrito!`);
-  };
+  if (idx >= 0) cart[idx].quantity += 1;
+  else cart.push({ ...product, quantity: 1, image: mainImage });
+
+  localStorage.setItem('cart', JSON.stringify(cart));
+
+  const goCart = window.confirm(
+    `✅ ${product.name} agregado al carrito.\n\n¿Ir al carrito?\n(Cancelar = Seguir comprando)`
+  );
+
+  if (goCart) navigate('/cart');
+};
+
 
   
   const buyNow = (product) => {
-    const user = localStorage.getItem('user');
-    if (!user) return navigate('/login');
+  const user = localStorage.getItem('user');
+  if (!user) return navigate('/login');
 
-    const mainImage =
-      product.ProductImages && product.ProductImages.length > 0
-        ? product.ProductImages[0].imageUrl
-        : 'https://via.placeholder.com/150?text=Sin+Foto';
+  const mainImage =
+    product.ProductImages && product.ProductImages.length > 0
+      ? product.ProductImages[0].imageUrl
+      : 'https://via.placeholder.com/150?text=Sin+Foto';
 
-    const buyNowCart = [{
-      ...product,
-      quantity: 1,
-      image: mainImage
-    }];
+  const checkoutCart = [{
+    ...product,
+    quantity: 1,
+    image: mainImage
+  }];
 
-    localStorage.setItem('cart', JSON.stringify(buyNowCart));
-    navigate('/checkout');
-  };
+  localStorage.setItem('checkout_cart', JSON.stringify(checkoutCart));
+
+ navigate('/checkout', { state: { items: [ { ...product, quantity: 1, image: mainImage } ] } })
+};
+
 
   const goToDetail = (id) => navigate(`/product/${id}`);
 
