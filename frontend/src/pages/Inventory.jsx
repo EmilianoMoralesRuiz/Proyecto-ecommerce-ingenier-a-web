@@ -55,21 +55,18 @@ const Inventory = () => {
     e.preventDefault();
     const token = localStorage.getItem('token');
     
-    // Preparamos los datos
     const payload = {
       ...formData,
-      // Convertimos el string de imagenes a un array real
       imageUrls: formData.imageUrls.split(',').map(url => url.trim()).filter(url => url !== '')
     };
 
     try {
       let url = import.meta.env.VITE_API_URL + '/api/products';
       let method = 'POST';
-
-      if (editingProduct) {
-        url = `https://mobistore-backend.onrender.com/api/products/${editingProduct.id}`;
-        method = 'PUT';
-      }
+    if (editingProduct) {
+  url = import.meta.env.VITE_API_URL + `/api/products/${editingProduct.id}`;
+  method = 'PUT';
+}
 
       const res = await fetch(url, {
         method: method,
@@ -94,8 +91,6 @@ const Inventory = () => {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
-    // Rellenar formulario con datos existentes
-    // Nota: Para las imágenes, tomamos el array y lo volvemos string para el input
     const imagesString = product.ProductImages ? product.ProductImages.map(img => img.imageUrl).join(', ') : '';
     
     setFormData({

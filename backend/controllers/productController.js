@@ -69,8 +69,40 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        await Product.update(req.body, { where: { id } });
-        res.json({ message: "Producto actualizado" });
+
+        const imageUrls = req.body.imageUrls ?? req.body.images ?? req.body.ProductImages ?? null;
+
+        const { imageUrls: _img1, images: _img2, ProductImages: _img3, ...productData } = req.body;
+
+        const [updated] = await Product.update(productData, { where: { id } });
+
+        if (!updated) {
+            return res.status(404).json({ message: "Producto no encontrado" });
+        }
+
+        if (Array.isArray(imageUrls)) {
+            const clean = imageUrls.map(u => (u || '').trim()).filter(Boolean);
+
+            await ProductImage.destroy({
+                where: {
+                    [Op.or]: [
+                        { productId: id },
+                        { ProductId: id }
+                    ]
+                }
+            });
+
+            if (clean.length > 0) {
+                await ProductImage.bulkCreate(
+                    clean.map(url => ({
+                        imageUrl: url,
+                        productId: id
+                    }))
+                );
+            }
+        }
+
+        res.json({ message: "Producto actualizado correctamente" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
