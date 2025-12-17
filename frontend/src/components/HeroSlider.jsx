@@ -28,24 +28,33 @@ function HeroSlider() {
 
   return (
     <div className="slider-container">
-      <div 
-        className="slider-wrapper" 
+      <div
+        className="slider-wrapper"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {banners.map((banner) => (
           <div key={banner.id} className="slide">
+            <div
+              className="slide-bg"
+              style={{ backgroundImage: `url(${banner.src})` }}
+            ></div>
+
             <img src={banner.src} alt={banner.alt} />
           </div>
         ))}
       </div>
 
-      <button className="slider-btn prev-btn" onClick={prevSlide}>&#10094;</button>
-      <button className="slider-btn next-btn" onClick={nextSlide}>&#10095;</button>
+      <button className="slider-btn prev-btn" onClick={prevSlide}>
+        &#10094;
+      </button>
+      <button className="slider-btn next-btn" onClick={nextSlide}>
+        &#10095;
+      </button>
 
       <div className="dots-container">
         {banners.map((_, index) => (
-          <span 
-            key={index} 
+          <span
+            key={index}
             className={`dot ${currentIndex === index ? "active" : ""}`}
             onClick={() => setCurrentIndex(index)}
           ></span>
