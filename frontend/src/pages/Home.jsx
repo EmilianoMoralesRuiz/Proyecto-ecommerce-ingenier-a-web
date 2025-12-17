@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 
 const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
   const images = product.ProductImages || [];
@@ -9,18 +8,13 @@ const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHover, setIsHover] = useState(false);
 
-  const currentImg =
-    images.length > 0 ? images[currentIndex]?.imageUrl : fallback;
+  const currentImg = images.length > 0 ? images[currentIndex]?.imageUrl : fallback;
 
   useEffect(() => {
     if (images.length <= 1) return;
-
     const interval = setInterval(() => {
-      setCurrentIndex((prev) =>
-        prev === images.length - 1 ? 0 : prev + 1
-      );
+      setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
     }, 2500);
-
     return () => clearInterval(interval);
   }, [images.length]);
 
@@ -50,9 +44,7 @@ const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
         </div>
         <div style={styles.price}>${product.price}</div>
 
-        <div style={styles.delivery}>
-          🚚 Llega en {product.delivery_days || 3} días
-        </div>
+        <div style={styles.delivery}>🚚 Llega en {product.delivery_days || 3} días</div>
 
         <button
           style={styles.button}
@@ -74,52 +66,51 @@ const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
   );
 };
 
-
 const Home = () => {
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('default'); 
   const navigate = useNavigate();
 
   const styles = {
     container: { padding: '30px', maxWidth: '1200px', margin: '0 auto' },
 
-    searchContainer: {
-      display: 'flex',
-      justifyContent: 'center',
-      marginBottom: '25px',
+    topControls: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 220px',
+      gap: '12px',
+      alignItems: 'center',
+      marginBottom: '18px',
     },
-    searchForm: {
-      display: 'flex',
-      width: '100%',
-      maxWidth: '600px',
-      gap: '10px',
-    },
+
     searchInput: {
-      flex: 1,
+      width: '100%',
       padding: '12px',
-      borderRadius: '8px',
+      borderRadius: '10px',
       border: '1px solid #ddd',
       fontSize: '16px',
+      outline: 'none',
     },
-    searchButton: {
-      padding: '12px 24px',
-      backgroundColor: '#007bff',
-      color: 'white',
-      border: 'none',
-      borderRadius: '8px',
+
+    select: {
+      width: '100%',
+      padding: '12px',
+      borderRadius: '10px',
+      border: '1px solid #ddd',
+      fontSize: '14px',
+      outline: 'none',
       cursor: 'pointer',
-      fontWeight: 'bold',
+      background: 'white'
     },
 
     filterContainer: {
       display: 'flex',
       gap: '15px',
-      marginBottom: '30px',
+      marginBottom: '22px',
       overflowX: 'auto',
       paddingBottom: '10px',
       borderBottom: '1px solid #eee',
@@ -188,28 +179,25 @@ const Home = () => {
       marginTop: '10px',
       fontWeight: 'bold',
     },
+
+    empty: { textAlign: 'center', padding: '40px', color: '#666' }
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async (search = '') => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      let url = `${import.meta.env.VITE_API_URL}/api/products`;
-      if (search) url += `?search=${encodeURIComponent(search)}`;
-
+      const url = `${import.meta.env.VITE_API_URL}/api/products`;
       const response = await fetch(url);
       const data = await response.json();
 
-      setProducts(data);
-      setFilteredProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
 
-      if (!search) {
-        const uniqueCategories = ['Todas', ...new Set(data.map((p) => p.category))];
-        setCategories(uniqueCategories);
-      }
+      const uniqueCategories = ['Todas', ...new Set((Array.isArray(data) ? data : []).map((p) => p.category))];
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error al cargar el catálogo:', error);
     } finally {
@@ -217,97 +205,158 @@ const Home = () => {
     }
   };
 
-  const handleFilter = (category) => {
-    setSelectedCategory(category);
-    setFilteredProducts(
-      category === 'Todas'
-        ? products
-        : products.filter((p) => p.category === category)
+  const filteredAndSorted = useMemo(() => {
+    let list = [...products];
+
+    if (selectedCategory !== 'Todas') {
+      list = list.filter((p) => p.category === selectedCategory);
+    }
+
+    const q = searchTerm.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) => {
+        const name = String(p.name || '').toLowerCase();
+        const cat = String(p.category || '').toLowerCase();
+        return name.includes(q) || cat.includes(q);
+      });
+    }
+
+    const priceNum = (x) => Number(x?.price) || 0;
+    const nameStr = (x) => String(x?.name || '').toLowerCase();
+
+    switch (sortBy) {
+      case 'price_asc':
+        list.sort((a, b) => priceNum(a) - priceNum(b));
+        break;
+      case 'price_desc':
+        list.sort((a, b) => priceNum(b) - priceNum(a));
+        break;
+      case 'name_asc':
+        list.sort((a, b) => nameStr(a).localeCompare(nameStr(b), 'es'));
+        break;
+      case 'name_desc':
+        list.sort((a, b) => nameStr(b).localeCompare(nameStr(a), 'es'));
+        break;
+      case 'newest':
+        list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        break;
+      default:
+        break;
+    }
+
+    return list;
+  }, [products, selectedCategory, searchTerm, sortBy]);
+
+  const addToCart = (product) => {
+    const user = localStorage.getItem('user');
+    if (!user) return navigate('/login');
+
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const idx = cart.findIndex((item) => item.id === product.id);
+
+    const mainImage =
+      product.ProductImages && product.ProductImages.length > 0
+        ? product.ProductImages[0].imageUrl
+        : 'https://via.placeholder.com/150?text=Sin+Foto';
+
+    if (idx >= 0) cart[idx].quantity += 1;
+    else cart.push({ ...product, quantity: 1, image: mainImage });
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+
+    const goCart = window.confirm(
+      `✅ ${product.name} agregado al carrito.\n\n¿Ir al carrito?\n(Cancelar = Seguir comprando)`
     );
+    if (goCart) navigate('/cart');
   };
 
- const addToCart = (product) => {
-  const user = localStorage.getItem('user');
-  if (!user) return navigate('/login');
-
-  const cart = JSON.parse(localStorage.getItem('cart')) || [];
-  const idx = cart.findIndex((item) => item.id === product.id);
-
-  const mainImage =
-    product.ProductImages && product.ProductImages.length > 0
-      ? product.ProductImages[0].imageUrl
-      : 'https://via.placeholder.com/150?text=Sin+Foto';
-
-  if (idx >= 0) cart[idx].quantity += 1;
-  else cart.push({ ...product, quantity: 1, image: mainImage });
-
-  localStorage.setItem('cart', JSON.stringify(cart));
-
-  const goCart = window.confirm(
-    `✅ ${product.name} agregado al carrito.\n\n¿Ir al carrito?\n(Cancelar = Seguir comprando)`
-  );
-
-  if (goCart) navigate('/cart');
-};
-
-
-  
   const buyNow = (product) => {
-  const user = localStorage.getItem('user');
-  if (!user) return navigate('/login');
+    const user = localStorage.getItem('user');
+    if (!user) return navigate('/login');
 
-  const mainImage =
-    product.ProductImages && product.ProductImages.length > 0
-      ? product.ProductImages[0].imageUrl
-      : 'https://via.placeholder.com/150?text=Sin+Foto';
+    const mainImage =
+      product.ProductImages && product.ProductImages.length > 0
+        ? product.ProductImages[0].imageUrl
+        : 'https://via.placeholder.com/150?text=Sin+Foto';
 
-  const checkoutCart = [{
-    ...product,
-    quantity: 1,
-    image: mainImage
-  }];
-
-  localStorage.setItem('checkout_cart', JSON.stringify(checkoutCart));
-
- navigate('/checkout', { state: { items: [ { ...product, quantity: 1, image: mainImage } ] } })
-};
-
+    navigate('/checkout', {
+      state: { items: [{ ...product, quantity: 1, image: mainImage }] },
+    });
+  };
 
   const goToDetail = (id) => navigate(`/product/${id}`);
 
-  if (loading)
+  if (loading) {
     return <div style={{ textAlign: 'center', padding: '50px' }}>Cargando catálogo...</div>;
+  }
 
   return (
     <div style={styles.container}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '16px', color: '#333' }}>
         Nuestros Productos
       </h1>
 
+      {/* ✅ NUEVO: buscador + ordenar */}
+      <div style={styles.topControls}>
+        <input
+          type="text"
+          placeholder="Buscar productos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={styles.select}>
+          <option value="default">Ordenar: recomendado</option>
+          <option value="price_asc">Precio: menor a mayor</option>
+          <option value="price_desc">Precio: mayor a menor</option>
+          <option value="name_asc">Nombre: A → Z</option>
+          <option value="name_desc">Nombre: Z → A</option>
+          <option value="newest">Más nuevos</option>
+        </select>
+      </div>
+
+      {/* ✅ Tu filtro por categorías se queda intacto */}
       <div style={styles.filterContainer}>
         {categories.map((cat) => (
           <button
             key={cat}
             style={styles.filterBtn(selectedCategory === cat)}
-            onClick={() => handleFilter(cat)}
+            onClick={() => setSelectedCategory(cat)}
           >
             {cat}
           </button>
         ))}
       </div>
 
-      <div style={styles.grid}>
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            styles={styles}
-            goToDetail={goToDetail}
-            addToCart={addToCart}
-            buyNow={buyNow}
-          />
-        ))}
-      </div>
+      {filteredAndSorted.length === 0 ? (
+        <div style={styles.empty}>
+          <p>No se encontraron productos.</p>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setSortBy('default');
+              setSelectedCategory('Todas');
+            }}
+            style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline' }}
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      ) : (
+        <div style={styles.grid}>
+          {filteredAndSorted.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              styles={styles}
+              goToDetail={goToDetail}
+              addToCart={addToCart}
+              buyNow={buyNow}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
