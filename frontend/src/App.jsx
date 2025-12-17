@@ -38,7 +38,7 @@ function App() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         
         <nav style={{ 
-          padding: '15px 30px', 
+          padding: '10px 30px', 
           borderBottom: '1px solid #e0e0e0', 
           marginBottom: '30px', 
           backgroundColor: '#fff',
@@ -48,8 +48,12 @@ function App() {
           boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
         }}>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <Link to="/" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold', fontSize: '1.2rem' }}>
-              📱 MobiStore
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+              <img 
+                src="https://i.imgur.com/vnx2K6w.png" 
+                alt="MobiStore Logo" 
+                style={{ height: '55px', objectFit: 'contain' }} 
+              />
             </Link>
             <Link to="/cart" style={{ textDecoration: 'none', color: '#555', fontSize: '1.1rem' }}>
               🛒 Carrito

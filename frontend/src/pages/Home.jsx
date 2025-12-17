@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import HeroSlider from '../components/HeroSlider';
 
 const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
   const images = product.ProductImages || [];
@@ -292,11 +293,7 @@ const Home = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={{ textAlign: 'center', marginBottom: '16px', color: '#333' }}>
-        Nuestros Productos
-      </h1>
-
-      {/* ✅ NUEVO: buscador + ordenar */}
+      
       <div style={styles.topControls}>
         <input
           type="text"
@@ -316,7 +313,12 @@ const Home = () => {
         </select>
       </div>
 
-      {/* ✅ Tu filtro por categorías se queda intacto */}
+      <HeroSlider />
+
+      <h1 style={{ textAlign: 'center', margin: '30px 0 16px', color: '#333' }}>
+        Nuestros Productos
+      </h1>
+
       <div style={styles.filterContainer}>
         {categories.map((cat) => (
           <button
