@@ -41,7 +41,6 @@ const Wallet = () => {
     label: { fontSize: '0.65rem', color: '#e0e0e0', textTransform: 'uppercase', marginBottom: '2px' },
     val: { fontSize: '1rem', fontWeight: 'bold', textTransform: 'uppercase' },
 
-    // Botón eliminar (arriba derecha dentro de la tarjeta)
     deleteBtn: {
       position: 'absolute',
       top: '12px',
@@ -114,6 +113,32 @@ const Wallet = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const [month, year] = newCard.expiration.split('/');
+
+if (!month || !year || month.length !== 2 || year.length !== 2) {
+  alert('Formato de vencimiento inválido. Usa MM/AA');
+  return;
+}
+
+const expMonth = parseInt(month, 10);
+const expYear = parseInt(`20${year}`, 10);
+
+if (expMonth < 1 || expMonth > 12) {
+  alert('El mes de vencimiento no es válido');
+  return;
+}
+
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+const currentYear = now.getFullYear();
+
+if (
+  expYear < currentYear ||
+  (expYear === currentYear && expMonth < currentMonth)
+) {
+  alert('La tarjeta está vencida');
+  return;
+}
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || 'null');
 

@@ -1,5 +1,24 @@
 import PaymentMethod from '../models/PaymentMethodModel.js';
 
+export const deleteCard = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const deleted = await PaymentMethod.destroy({
+      where: { id, userId }
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Tarjeta no encontrada' });
+    }
+
+    res.json({ message: 'Tarjeta eliminada correctamente' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const addCard = async (req, res) => {
     try {
         const { card_holder, card_number, expiration_date, cvv, userId } = req.body;

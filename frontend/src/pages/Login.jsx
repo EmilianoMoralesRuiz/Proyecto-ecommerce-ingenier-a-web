@@ -93,18 +93,38 @@ function Login() {
     e.preventDefault();
     setError('');
 
+    const emailTrim = email.trim();
+    const passTrim = password.trim();
+
+    if (!emailTrim || !passTrim) {
+      setError('Todos los campos son obligatorios');
+      return;
+    }
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim);
+    if (!emailOk) {
+      setError('Correo inválido (ej: usuario@correo.com)');
+      return;
+    }
+
+    if (passTrim.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
     try {
       const response = await fetch(import.meta.env.VITE_API_URL + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: emailTrim, password: passTrim })
       });
+
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        window.location.href = '/'; 
+        window.location.href = '/';
       } else {
         setError(data.message || 'Error al iniciar sesión');
       }
@@ -114,12 +134,14 @@ function Login() {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
     try {
       const res = await fetch(import.meta.env.VITE_API_URL + '/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential })
       });
+
       const data = await res.json();
 
       if (res.ok) {
@@ -127,7 +149,7 @@ function Login() {
         localStorage.setItem('user', JSON.stringify(data.user));
         window.location.href = '/';
       } else {
-        setError(data.message || 'Fallo la autenticación con Google');
+        setError(data.message || 'Falló la autenticación con Google');
       }
     } catch (err) {
       setError('Error conectando con Google');
@@ -139,24 +161,24 @@ function Login() {
       <div style={styles.pageContainer}>
         <div style={styles.card}>
           <h2 style={styles.title}>Iniciar Sesión</h2>
-          
+
           {error && <div style={styles.errorMessage}>⚠️ {error}</div>}
 
           <form onSubmit={handleLogin} style={styles.form}>
-            <input 
-              type="email" 
-              placeholder="Correo electrónico" 
+            <input
+              type="email"
+              placeholder="Correo electrónico"
               value={email}
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
+              onChange={(e) => setEmail(e.target.value)}
+              required
               style={styles.input}
             />
-            <input 
-              type="password" 
-              placeholder="Contraseña" 
+            <input
+              type="password"
+              placeholder="Contraseña"
               value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
+              onChange={(e) => setPassword(e.target.value)}
+              required
               style={styles.input}
             />
             <button type="submit" style={styles.button}>
@@ -165,7 +187,7 @@ function Login() {
           </form>
 
           <div style={styles.divider}></div>
-          
+
           <div style={styles.googleContainer}>
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
@@ -175,7 +197,7 @@ function Login() {
           </div>
 
           <div style={styles.registerLink}>
-            ¿No tienes una cuenta? 
+            ¿No tienes una cuenta?
             <Link to="/register" style={styles.link}>Regístrate aquí</Link>
           </div>
         </div>
