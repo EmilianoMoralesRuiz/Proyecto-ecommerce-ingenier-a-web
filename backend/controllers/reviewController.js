@@ -3,39 +3,36 @@ import User from '../models/UserModel.js';
 import Order from '../models/OrderModel.js';
 import OrderItem from '../models/OrderItemModel.js';
 
-// Guardar una nueva reseña
 export const createReview = async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
     const userId = req.user.id; // Viene del token
 
-    // Validaciones básicas
-    if (!productId || !rating) {
-      return res.status(400).json({ message: "Faltan datos obligatorios (productId, rating)." });
-    }
-
-    const orderWithProduct = await Order.findOne({
-      where: { userId },
+    // 1) Validación: solo reseñar si compró y está ENTREGADO
+    const deliveredPurchase = await Order.findOne({
+      where: { userId, status: 'delivered' },
       include: [
         {
           model: OrderItem,
-          required: true,
-          where: { ProductId: productId } // 👈 importante: en OrderItem es ProductId
+          where: { ProductId: productId },
+          required: true
         }
-      ],
+      ]
     });
 
-    if (!orderWithProduct) {
+    if (!deliveredPurchase) {
       return res.status(403).json({
-        message: "Solo puedes dejar reseña si compraste este producto."
+        message: 'Solo puedes reseñar este producto cuando tu pedido esté marcado como ENTREGADO.'
       });
     }
 
+    // 2) Evitar reseñas duplicadas del mismo usuario al mismo producto
     const existingReview = await Review.findOne({ where: { productId, userId } });
     if (existingReview) {
       return res.status(400).json({ message: "Ya has calificado este producto anteriormente." });
     }
 
+    // 3) Crear reseña
     const newReview = await Review.create({
       userId,
       productId,
@@ -49,6 +46,7 @@ export const createReview = async (req, res) => {
   }
 };
 
+// Obtener reseñas de un producto específico
 export const getProductReviews = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -62,3 +60,4 @@ export const getProductReviews = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
