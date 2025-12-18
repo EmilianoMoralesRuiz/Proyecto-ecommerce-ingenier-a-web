@@ -288,13 +288,19 @@ const Wallet = () => {
           <div style={styles.inputGroup}>
             <label>Nombre del Titular</label>
             <input
-              name="card_holder"
-              placeholder="Como aparece en la tarjeta"
-              value={newCard.card_holder}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
+  name="card_holder"
+  placeholder="Como aparece en la tarjeta"
+  value={newCard.card_holder}
+  onChange={(e) => {
+    const value = e.target.value;
+    // Solo letras y espacios
+    if (/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]*$/.test(value)) {
+      setNewCard({ ...newCard, card_holder: value });
+    }
+  }}
+  required
+  style={styles.input}
+/>
           </div>
 
           <div style={styles.inputGroup}>

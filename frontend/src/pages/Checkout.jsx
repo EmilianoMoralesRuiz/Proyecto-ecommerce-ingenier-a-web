@@ -688,12 +688,17 @@ const Checkout = () => {
                     <div style={styles.inputGroup}>
                       <label>Teléfono</label>
                       <input
-                        name="phone"
-                        value={address.phone}
-                        onChange={handleAddressChange}
-                        style={styles.input}
-                        placeholder="Ej. 5512345678"
-                      />
+  name="phone"
+  value={address.phone}
+  onChange={(e) => {
+    // Solo números y máximo 10 dígitos
+    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setAddress({ ...address, phone: value });
+  }}
+  style={styles.input}
+  placeholder="Ej. 5512345678"
+  maxLength={10}
+/>
                     </div>
 
                     <div style={{ ...styles.inputGroup, gridColumn: "1 / -1" }}>
