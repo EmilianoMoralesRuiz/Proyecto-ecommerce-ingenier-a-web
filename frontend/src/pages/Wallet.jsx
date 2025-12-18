@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Wallet = () => {
@@ -15,6 +15,25 @@ const Wallet = () => {
     expiration: '',
     cvv: ''
   });
+
+  const buyNowItem = useMemo(() => {
+    const stateBuyNow = location.state?.buyNowItem || null;
+    const storedBuyNow = JSON.parse(sessionStorage.getItem('buy_now_item') || 'null');
+    return stateBuyNow || storedBuyNow || null;
+  }, [location.state]);
+
+  const goBackToCheckout = (replace = false) => {
+    if (!fromCheckout) {
+      navigate('/checkout', { replace });
+      return;
+    }
+
+    if (buyNowItem) {
+      navigate('/checkout', { state: { buyNowItem }, replace });
+    } else {
+      navigate('/checkout', { replace });
+    }
+  };
 
   const styles = {
     container: { padding: '40px', maxWidth: '800px', margin: '0 auto' },
@@ -98,47 +117,41 @@ const Wallet = () => {
   const handleInputChange = (e) => {
     setNewCard({ ...newCard, [e.target.name]: e.target.value });
   };
+
   const handleExpirationChange = (e) => {
-  let value = e.target.value.replace(/\D/g, ''); // solo números
-
-  if (value.length > 4) value = value.slice(0, 4);
-
-  if (value.length >= 3) {
-    value = value.slice(0, 2) + '/' + value.slice(2);
-  }
-
-  setNewCard({ ...newCard, expiration: value });
-};
-
+    let value = e.target.value.replace(/\D/g, ''); // solo números
+    if (value.length > 4) value = value.slice(0, 4);
+    if (value.length >= 3) value = value.slice(0, 2) + '/' + value.slice(2);
+    setNewCard({ ...newCard, expiration: value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const [month, year] = newCard.expiration.split('/');
 
-if (!month || !year || month.length !== 2 || year.length !== 2) {
-  alert('Formato de vencimiento inválido. Usa MM/AA');
-  return;
-}
+    if (!month || !year || month.length !== 2 || year.length !== 2) {
+      alert('Formato de vencimiento inválido. Usa MM/AA');
+      return;
+    }
 
-const expMonth = parseInt(month, 10);
-const expYear = parseInt(`20${year}`, 10);
+    const expMonth = parseInt(month, 10);
+    const expYear = parseInt(`20${year}`, 10);
 
-if (expMonth < 1 || expMonth > 12) {
-  alert('El mes de vencimiento no es válido');
-  return;
-}
+    if (expMonth < 1 || expMonth > 12) {
+      alert('El mes de vencimiento no es válido');
+      return;
+    }
 
-const now = new Date();
-const currentMonth = now.getMonth() + 1;
-const currentYear = now.getFullYear();
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
 
-if (
-  expYear < currentYear ||
-  (expYear === currentYear && expMonth < currentMonth)
-) {
-  alert('La tarjeta está vencida');
-  return;
-}
+    if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      alert('La tarjeta está vencida');
+      return;
+    }
+
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || 'null');
 
@@ -167,12 +180,12 @@ if (
         alert('Tarjeta guardada correctamente');
         setNewCard({ card_holder: '', card_number: '', expiration: '', cvv: '' });
 
+        await fetchCards();
+
         if (fromCheckout) {
-          navigate('/checkout');
+          goBackToCheckout(true); 
           return;
         }
-
-        fetchCards();
       } else {
         const err = await res.json();
         alert('Error: ' + (err.message || 'No se pudo guardar la tarjeta'));
@@ -219,7 +232,7 @@ if (
       {/* Botones superiores */}
       <div style={styles.topBtns}>
         {fromCheckout && (
-          <button style={styles.btnLight} onClick={() => navigate('/checkout')}>
+          <button style={styles.btnLight} onClick={() => goBackToCheckout(false)}>
             Volver a pago
           </button>
         )}
@@ -300,15 +313,15 @@ if (
           <div style={styles.row}>
             <div style={styles.inputGroup}>
               <label>Vencimiento (MM/AA)</label>
-             <input
-  name="expiration"
-  placeholder="MM/AA"
-  value={newCard.expiration}
-  onChange={handleExpirationChange}
-  maxLength="5"
-  required
-  style={styles.input}
-/>
+              <input
+                name="expiration"
+                placeholder="MM/AA"
+                value={newCard.expiration}
+                onChange={handleExpirationChange}
+                maxLength="5"
+                required
+                style={styles.input}
+              />
             </div>
             <div style={styles.inputGroup}>
               <label>CVV</label>

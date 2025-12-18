@@ -5,11 +5,10 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
-  const [reviews, setReviews] = useState([]); // Lista de reseñas
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState('');
-  
-  // Formulario reseña
+
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
 
@@ -25,8 +24,10 @@ const ProductDetail = () => {
     desc: { lineHeight: '1.6', color: '#555', marginBottom: '20px' },
     meta: { fontSize: '0.9rem', color: '#777', marginBottom: '10px' },
     btn: { padding: '15px 30px', backgroundColor: '#333', color: 'white', border: 'none', fontSize: '1rem', cursor: 'pointer', borderRadius: '5px' },
-    
-    // Estilos Reseñas
+    btnBuyNow: { padding: '15px 30px', backgroundColor: '#007bff', color: 'white', border: 'none', fontSize: '1rem', cursor: 'pointer', borderRadius: '5px' },
+    btnRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '10px' },
+
+
     reviewSection: { marginTop: '50px', width: '100%', borderTop: '1px solid #eee', paddingTop: '30px' },
     star: { cursor: 'pointer', fontSize: '1.5rem', color: '#ffc107' },
     reviewCard: { backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '15px' },
@@ -35,31 +36,24 @@ const ProductDetail = () => {
 
   useEffect(() => {
     fetchProductAndReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchProductAndReviews = async () => {
     try {
-      // 1. Cargar Producto
+      // Producto
       const resProd = await fetch(`https://mobistore-backend.onrender.com/api/products/${id}`);
       const dataProd = await resProd.json();
       setProduct(dataProd);
-
       if (dataProd.ProductImages && dataProd.ProductImages.length > 0) {
         setSelectedImage(dataProd.ProductImages[0].imageUrl);
-      } else {
-        setSelectedImage('');
       }
 
-      // 2. Cargar Reseñas
+      // Reseñas
       const resRev = await fetch(`https://mobistore-backend.onrender.com/api/reviews/${id}`);
       if (resRev.ok) {
         const dataRev = await resRev.json();
         setReviews(dataRev);
-      } else {
-        setReviews([]);
       }
-
     } catch (error) {
       console.error(error);
     } finally {
@@ -67,22 +61,17 @@ const ProductDetail = () => {
     }
   };
 
-  // ✅ MODIFICADO: agrega confirm para "Ir a carrito / Seguir comprando"
   const handleAddToCart = () => {
     const user = localStorage.getItem('user');
     if (!user) return navigate('/login');
 
-    if (!product) return;
-
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
     const existingIndex = cart.findIndex(item => item.id === product.id);
-
-    const imgToSave = selectedImage || 'https://via.placeholder.com/150?text=Sin+Foto';
 
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += 1;
     } else {
-      cart.push({ ...product, quantity: 1, image: imgToSave });
+      cart.push({ ...product, quantity: 1, image: selectedImage || 'https://via.placeholder.com/150?text=Sin+Foto' });
     }
 
     localStorage.setItem('cart', JSON.stringify(cart));
@@ -90,8 +79,26 @@ const ProductDetail = () => {
     const goCart = window.confirm(
       `✅ ${product.name} agregado al carrito.\n\n¿Ir al carrito?\n(Cancelar = Seguir comprando)`
     );
-
     if (goCart) navigate('/cart');
+  };
+
+
+  const handleBuyNow = () => {
+    const user = localStorage.getItem('user');
+    if (!user) return navigate('/login');
+
+    const mainImage =
+      (product.ProductImages && product.ProductImages.length > 0)
+        ? product.ProductImages[0].imageUrl
+        : (selectedImage || 'https://via.placeholder.com/150?text=Sin+Foto');
+
+    const buyNowItem = {
+      ...product,
+      quantity: 1,
+      image: mainImage
+    };
+
+  navigate("/checkout", { state: { buyNowItem: { ...product, quantity: 1, image: selectedImage } } });
   };
 
   const submitReview = async (e) => {
@@ -117,7 +124,7 @@ const ProductDetail = () => {
       if (res.ok) {
         alert('¡Gracias por tu opinión!');
         setComment('');
-        fetchProductAndReviews(); // Recargar para ver la nueva reseña
+        fetchProductAndReviews();
       } else {
         alert(data.message);
       }
@@ -126,9 +133,8 @@ const ProductDetail = () => {
     }
   };
 
-  // Calcular promedio
-  const averageRating = reviews.length > 0 
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : 'Nueva';
 
   if (loading) return <div>Cargando...</div>;
@@ -138,19 +144,15 @@ const ProductDetail = () => {
     <div style={styles.container}>
       {/* GALERÍA */}
       <div style={styles.gallery}>
-        <img
-          src={selectedImage || 'https://via.placeholder.com/400'}
-          alt={product.name}
-          style={styles.mainImage}
-        />
+        <img src={selectedImage || 'https://via.placeholder.com/400'} alt={product.name} style={styles.mainImage} />
         <div style={styles.thumbnails}>
           {product.ProductImages && product.ProductImages.map((img, index) => (
-            <img 
+            <img
               key={index}
               src={img.imageUrl}
-              alt={`thumb-${index}`}
               style={{ ...styles.thumb, borderColor: selectedImage === img.imageUrl ? '#007bff' : '#ddd' }}
               onClick={() => setSelectedImage(img.imageUrl)}
+              alt=""
             />
           ))}
         </div>
@@ -160,8 +162,7 @@ const ProductDetail = () => {
       <div style={styles.info}>
         <h1 style={styles.title}>{product.name}</h1>
         <div style={styles.price}>${product.price}</div>
-        
-        {/* Promedio visual */}
+
         <div style={{ marginBottom: '15px', color: '#ffc107', fontWeight: 'bold', fontSize: '1.2rem' }}>
           ★ {averageRating}{' '}
           <span style={{ color: '#777', fontSize: '0.9rem', fontWeight: 'normal' }}>
@@ -172,19 +173,24 @@ const ProductDetail = () => {
         <div style={styles.meta}>Categoría: {product.category}</div>
         <div style={styles.meta}>Stock: {product.stock} unidades</div>
         <div style={styles.meta}>Entrega estimada: {product.delivery_days} días</div>
-        
+
         <p style={styles.desc}>{product.description}</p>
 
-        <button style={styles.btn} onClick={handleAddToCart} disabled={product.stock <= 0}>
-          {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
-        </button>
+        <div style={styles.btnRow}>
+          <button style={styles.btn} onClick={handleAddToCart} disabled={product.stock <= 0}>
+            {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
+          </button>
+
+          <button style={styles.btnBuyNow} onClick={handleBuyNow} disabled={product.stock <= 0}>
+            Comprar ahora
+          </button>
+        </div>
       </div>
 
-      {/* SECCIÓN DE RESEÑAS */}
+      {/* RESEÑAS */}
       <div style={styles.reviewSection}>
         <h2>⭐ Opiniones de Clientes</h2>
-        
-        {/* Formulario */}
+
         <form onSubmit={submitReview} style={{ marginTop: '20px', maxWidth: '500px', marginBottom: '40px' }}>
           <h4 style={{ marginBottom: '10px' }}>Deja tu valoración:</h4>
           <div style={{ marginBottom: '10px' }}>
@@ -194,8 +200,8 @@ const ProductDetail = () => {
               </span>
             ))}
           </div>
-          <textarea 
-            placeholder="¿Qué te pareció el producto?" 
+          <textarea
+            placeholder="¿Qué te pareció el producto?"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             style={{ width: '100%', padding: '10px', height: '80px', marginBottom: '10px' }}
@@ -205,12 +211,9 @@ const ProductDetail = () => {
           </button>
         </form>
 
-        {/* Lista de comentarios */}
         <div>
           {reviews.length === 0 ? (
-            <p style={{ color: '#777' }}>
-              Este producto aún no tiene reseñas. ¡Sé el primero!
-            </p>
+            <p style={{ color: '#777' }}>Este producto aún no tiene reseñas. ¡Sé el primero!</p>
           ) : (
             reviews.map(rev => (
               <div key={rev.id} style={styles.reviewCard}>

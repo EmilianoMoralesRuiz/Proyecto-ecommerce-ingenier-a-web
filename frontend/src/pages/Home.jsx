@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeroSlider from '../components/HeroSlider';
 
-const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
+const ProductCard = ({ product, styles, goToDetail, addToCart }) => {
   const images = product.ProductImages || [];
   const fallback = 'https://via.placeholder.com/300x200?text=Sin+Imagen';
 
@@ -54,14 +54,6 @@ const ProductCard = ({ product, styles, goToDetail, addToCart, buyNow }) => {
         >
           {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
         </button>
-
-        <button
-          style={{ ...styles.button, backgroundColor: '#007bff' }}
-          onClick={() => buyNow(product)}
-          disabled={product.stock <= 0}
-        >
-          Comprar ahora
-        </button>
       </div>
     </div>
   );
@@ -74,7 +66,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('default'); 
+  const [sortBy, setSortBy] = useState('default');
   const navigate = useNavigate();
 
   const styles = {
@@ -105,7 +97,7 @@ const Home = () => {
       fontSize: '14px',
       outline: 'none',
       cursor: 'pointer',
-      background: 'white'
+      background: 'white',
     },
 
     filterContainer: {
@@ -181,7 +173,7 @@ const Home = () => {
       fontWeight: 'bold',
     },
 
-    empty: { textAlign: 'center', padding: '40px', color: '#666' }
+    empty: { textAlign: 'center', padding: '40px', color: '#666' },
   };
 
   useEffect(() => {
@@ -197,7 +189,10 @@ const Home = () => {
 
       setProducts(Array.isArray(data) ? data : []);
 
-      const uniqueCategories = ['Todas', ...new Set((Array.isArray(data) ? data : []).map((p) => p.category))];
+      const uniqueCategories = [
+        'Todas',
+        ...new Set((Array.isArray(data) ? data : []).map((p) => p.category)),
+      ];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error al cargar el catálogo:', error);
@@ -271,20 +266,6 @@ const Home = () => {
     if (goCart) navigate('/cart');
   };
 
-  const buyNow = (product) => {
-    const user = localStorage.getItem('user');
-    if (!user) return navigate('/login');
-
-    const mainImage =
-      product.ProductImages && product.ProductImages.length > 0
-        ? product.ProductImages[0].imageUrl
-        : 'https://via.placeholder.com/150?text=Sin+Foto';
-
-    navigate('/checkout', {
-      state: { items: [{ ...product, quantity: 1, image: mainImage }] },
-    });
-  };
-
   const goToDetail = (id) => navigate(`/product/${id}`);
 
   if (loading) {
@@ -293,7 +274,6 @@ const Home = () => {
 
   return (
     <div style={styles.container}>
-      
       <div style={styles.topControls}>
         <input
           type="text"
@@ -340,7 +320,13 @@ const Home = () => {
               setSortBy('default');
               setSelectedCategory('Todas');
             }}
-            style={{ cursor: 'pointer', background: 'none', border: 'none', color: '#007bff', textDecoration: 'underline' }}
+            style={{
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              color: '#007bff',
+              textDecoration: 'underline',
+            }}
           >
             Limpiar filtros
           </button>
@@ -354,7 +340,6 @@ const Home = () => {
               styles={styles}
               goToDetail={goToDetail}
               addToCart={addToCart}
-              buyNow={buyNow}
             />
           ))}
         </div>
