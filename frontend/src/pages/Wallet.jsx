@@ -306,14 +306,17 @@ const Wallet = () => {
           <div style={styles.inputGroup}>
             <label>Número de Tarjeta</label>
             <input
-              name="card_number"
-              placeholder="XXXX XXXX XXXX XXXX"
-              maxLength="16"
-              value={newCard.card_number}
-              onChange={handleInputChange}
-              required
-              style={styles.input}
-            />
+  name="card_number"
+  placeholder="XXXX XXXX XXXX XXXX"
+  maxLength="16"
+  value={newCard.card_number}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\D/g, ''); // 🔒 solo números
+    setNewCard({ ...newCard, card_number: value });
+  }}
+  required
+  style={styles.input}
+/>
           </div>
 
           <div style={styles.row}>
