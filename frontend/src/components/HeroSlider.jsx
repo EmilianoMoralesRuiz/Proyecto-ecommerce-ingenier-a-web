@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 
 const banners = [
   { id: 1, src: "https://i.imgur.com/qzHgAHF.png", alt: "Promo 1" },
-  { id: 2, src: "https://i.imgur.com/egBsE7Q.jpeg", alt: "Promo 2" },
   { id: 3, src: "https://i.imgur.com/CjuFSPj.png", alt: "Promo 3" },
   { id: 4, src: "https://i.imgur.com/rrF2rMk.jpeg", alt: "Promo 4" }
 ];

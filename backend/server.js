@@ -43,7 +43,7 @@ const conectarDB = async () => {
         console.log('Conexión exitosa a la base de datos MySQL');
         
         // alter: true actualiza la estructura de las tablas existentes y crea las nuevas
-        await db.sync({ alter: true }); 
+        await db.sync(); 
         console.log('Tablas y Modelos sincronizados correctamente');
     } catch (error) {
         console.error('Error al conectar a la base de datos:', error);
